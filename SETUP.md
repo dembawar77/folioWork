@@ -11,10 +11,11 @@ Ordre à respecter : **1 → 6**. Chaque étape a besoin de la précédente.
 
 1. Créez un compte sur **dashboard.convex.dev** (connexion avec GitHub).
 2. **Create project** → nom : `foliowork`.
-3. Ouvrez le déploiement **Production** (menu en haut).
-4. Notez deux adresses dans **Settings → URL & Deploy Key** :
-   - l'adresse des actions HTTP, qui se termine par **`.convex.site`** (vous en aurez besoin pour Google et pour vérifier le bot) ;
-   - générez une **Production Deploy Key** et gardez-la de côté (étape 4).
+3. Ouvrez le déploiement **Production** : cliquez sur le nom du projet en haut à gauche, puis choisissez **Production**.
+   ⚠️ Ne confondez pas avec **Project settings** (réglages du projet) : la clé n'y est pas.
+4. Dans le menu de gauche du déploiement Production, ouvrez **Settings** (engrenage en bas) et récupérez :
+   - **HTTP Actions URL**, qui se termine par **`.convex.site`** (nécessaire pour Google à l'étape 2) ;
+   - une **Production Deploy Key** : cliquez sur *Generate*, copiez-la tout de suite (elle ne s'affiche qu'une fois) et gardez-la pour l'étape 5.
 
 ## 2. Google (le bouton « Continuer avec Google »)
 
