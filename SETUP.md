@@ -63,16 +63,17 @@ Le tableau de bord Cloudflare s'affiche en français.
    | Champ | Valeur |
    |---|---|
    | Nom du projet | `foliowork` |
-   | Branche de production | la branche du code (ex. `main`) |
+   | Branche de production | `main` (obligatoire : Convex ne met à jour la Production que depuis `main`) |
    | Préréglage de framework | **Aucun** |
    | Commande de build | `npm run build:cloudflare` |
    | Répertoire de sortie de build | `dist` |
 
 5. **Variables d'environnement (avancé)** → ajoutez :
-   - `CONVEX_DEPLOY_KEY` = la Deploy Key de l'étape 1
+   - `CONVEX_DEPLOY_KEY` = la Deploy Key de l'étape 1, de type **Secret** (pas Texte)
    - `NODE_VERSION` = `22`
-6. **Enregistrer et déployer**. Chaque build envoie aussi le backend sur Convex.
-7. L'adresse finale est `https://NOM-DU-PROJET.pages.dev`. Si elle diffère de celle mise dans `SITE_URL`, corrigez `SITE_URL` dans Convex.
+6. Après création : **Paramètres** → **Contrôle de branche** (crayon) → **Branche en production** : `main`, **Aperçu de la branche** : **Aucun**.
+7. **Enregistrer et déployer**. Chaque build envoie aussi le backend sur Convex.
+8. L'adresse finale est `https://NOM-DU-PROJET.pages.dev`. Si elle diffère de celle mise dans `SITE_URL`, corrigez `SITE_URL` dans Convex.
 
 ## 6. Clés de notification et branchement du bot
 
@@ -102,6 +103,7 @@ Dans Convex → **Functions** :
 | Retour sur la page de connexion après Google | `SITE_URL` ne correspond pas à l'adresse de l'app |
 | « Notifications web non configurées » | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` absents (étape 6) |
 | Le bot ne répond pas | `telegram:setup` pas lancé, ou `TELEGRAM_WEBHOOK_SECRET` défini après l'avoir lancé : relancez `telegram:setup` |
+| Build Cloudflare : « Detected a non-production build environment » | la branche en production n'est pas `main` (Paramètres → Contrôle de branche) |
 | Le build Cloudflare échoue sur une variable manquante | les variables de l'étape 4 doivent exister **avant** le premier build |
 
 Les journaux d'exécution sont dans Convex → **Logs**.
