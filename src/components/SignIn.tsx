@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useSignInWithGoogle, useOauth } from "@convex-dev/auth/methods/google/react";
 import { api } from "../../convex/_generated/api";
+import { Wordmark } from "./Wordmark";
 
 const POINTS = [
   { k: "01", t: "Synchronisé partout", d: "Une tâche notée sur l'ordinateur apparaît aussitôt sur le téléphone." },
@@ -27,15 +28,14 @@ export function SignIn() {
   return (
     <main className="mx-auto flex min-h-dvh max-w-5xl flex-col px-4 pt-6 pb-10 sm:px-8 sm:pt-10">
       <header className="flex items-center justify-between border-b border-line pb-4">
-        <span className="font-display text-lg font-bold tracking-tight">
-          Folio<span className="text-accent">Work</span>
-        </span>
-        <span className="tabular text-xs text-ink-3">v0.1</span>
+        <Wordmark />
+        <span className="eyebrow text-ink-2">v0.1</span>
       </header>
 
       <section className="grid flex-1 content-center gap-12 py-12 lg:grid-cols-[1.2fr_1fr] lg:gap-16">
         <div>
-          <h1 className="text-4xl leading-[1.08] font-bold tracking-tight sm:text-5xl">
+          <p className="eyebrow mb-6 text-ink-2">Tâches · Notes · Rappels</p>
+          <h1 className="text-4xl leading-[1.08] sm:text-5xl">
             Vos tâches, vos notes, <br className="hidden sm:block" />
             vos rappels. Un seul endroit.
           </h1>
@@ -46,13 +46,13 @@ export function SignIn() {
           <button
             onClick={start}
             disabled={pending}
-            className="mt-8 inline-flex h-12 items-center gap-3 rounded-md bg-ink px-5 font-medium text-white transition-[transform,opacity] duration-150 ease-out-expo hover:opacity-90 active:scale-[0.98] disabled:opacity-60"
+            className="mt-10 inline-flex h-12 items-center gap-3 bg-ink px-5 font-medium text-white transition-opacity duration-200 ease-brand hover:opacity-[.86] disabled:opacity-60"
           >
             <GoogleMark />
             {pending ? "Redirection…" : "Continuer avec Google"}
           </button>
           {(error || flowError) && (
-            <p role="alert" className="mt-3 text-sm text-danger">
+            <p role="alert" className="mt-3 text-sm font-medium text-ink">
               {error ?? "La connexion a échoué. Réessayez."}
             </p>
           )}
@@ -61,9 +61,9 @@ export function SignIn() {
         <ol className="divide-y divide-line border-y border-line">
           {POINTS.map((p) => (
             <li key={p.k} className="grid grid-cols-[2.5rem_1fr] gap-2 py-5">
-              <span className="tabular pt-0.5 text-xs text-ink-3">{p.k}</span>
+              <span className="tabular pt-0.5 text-xs text-ink-2">{p.k}</span>
               <div>
-                <h2 className="text-[15px] font-semibold">{p.t}</h2>
+                <h2 className="text-[15px] tracking-normal">{p.t}</h2>
                 <p className="mt-1 text-sm text-ink-2">{p.d}</p>
               </div>
             </li>

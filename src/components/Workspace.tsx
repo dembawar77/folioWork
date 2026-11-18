@@ -10,6 +10,7 @@ import { QuickCapture, type QuickCaptureHandle } from "./QuickCapture";
 import { TaskRow } from "./TaskRow";
 import { AlertsPanel } from "./AlertsPanel";
 import { InstallButton } from "./InstallButton";
+import { Wordmark } from "./Wordmark";
 
 const VIEWS: View[] = ["today", "upcoming", "all", "done", "alerts"];
 
@@ -126,9 +127,9 @@ export function Workspace() {
   return (
     <div className="min-h-dvh bg-canvas">
       {/* ── Barre du haut (ordinateur) ───────────────────────── */}
-      <header className="sticky top-0 z-20 hidden h-14 items-center border-b border-line bg-canvas/95 px-6 backdrop-blur md:flex">
-        <div className="w-[216px] font-display text-lg font-bold tracking-tight">
-          Folio<span className="text-accent">Work</span>
+      <header className="sticky top-0 z-20 hidden h-14 items-center border-b border-line bg-canvas px-6 md:flex">
+        <div className="w-[216px]">
+          <Wordmark />
         </div>
         <nav className="flex flex-1 items-center gap-1" aria-label="Vues">
           {(["today", "upcoming", "all", "alerts"] as View[]).map((v) => (
@@ -139,7 +140,7 @@ export function Workspace() {
               className={`relative h-14 px-3 text-sm font-medium transition-colors duration-150 ${view === v ? "text-ink" : "text-ink-2 hover:text-ink"}`}
             >
               {VIEW_LABEL[v]}
-              {view === v && <span className="absolute inset-x-3 bottom-0 h-0.5 bg-accent" />}
+              {view === v && <span className="absolute inset-x-3 bottom-0 h-[1.5px] bg-ink" />}
             </button>
           ))}
         </nav>
@@ -152,17 +153,17 @@ export function Workspace() {
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Rechercher  /"
               aria-label="Rechercher dans les tâches et les notes"
-              className="h-9 w-56 rounded-md border border-line bg-alabaster pr-2 pl-8 text-sm outline-none focus:border-accent focus:bg-canvas"
+              className="h-9 w-56 border border-line bg-alabaster pr-2 pl-8 text-sm outline-none focus:border-ink focus:bg-canvas"
             />
           </label>
-          <button onClick={goCapture} className="inline-flex h-9 items-center gap-1.5 rounded-md bg-accent px-3 text-sm font-medium text-white hover:opacity-90">
+          <button onClick={goCapture} className="inline-flex h-9 items-center gap-1.5 bg-ink px-3 text-sm font-medium text-white hover:opacity-90">
             <Plus className="size-4" aria-hidden /> Nouvelle tâche
           </button>
         </div>
       </header>
 
       {/* ── En-tête (mobile) ────────────────────────────────── */}
-      <header className="sticky top-0 z-20 flex h-[52px] items-center gap-2 border-b border-line bg-canvas/95 px-4 backdrop-blur md:hidden">
+      <header className="sticky top-0 z-20 flex h-[52px] items-center gap-2 border-b border-line bg-canvas px-4 md:hidden">
         {searchOpen ? (
           <>
             <input
@@ -171,7 +172,7 @@ export function Workspace() {
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Rechercher…"
               aria-label="Rechercher"
-              className="h-9 min-w-0 flex-1 rounded-md border border-line bg-alabaster px-3 text-sm outline-none"
+              className="h-9 min-w-0 flex-1 border border-line bg-alabaster px-3 text-sm outline-none"
             />
             <button
               onClick={() => {
@@ -186,8 +187,8 @@ export function Workspace() {
           </>
         ) : (
           <>
-            <span className="flex-1 font-display text-lg font-bold tracking-tight">
-              Folio<span className="text-accent">Work</span>
+            <span className="flex-1">
+              <Wordmark />
             </span>
             <button onClick={() => setSearchOpen(true)} aria-label="Rechercher" className="grid size-11 place-items-center text-ink-2">
               <Search className="size-5" />
@@ -214,9 +215,9 @@ export function Workspace() {
           <div className="mt-auto space-y-3 border-t border-line pt-4">
             <InstallButton />
             <div className="flex items-center gap-2">
-              {me?.image ? <img src={me.image} alt="" className="size-7 rounded-full" referrerPolicy="no-referrer" /> : <span className="size-7 rounded-full bg-hover" />}
+              {me?.image ? <img src={me.image} alt="" className="size-7" referrerPolicy="no-referrer" /> : <span className="size-7 bg-hover" />}
               <span className="min-w-0 flex-1 truncate text-sm">{me?.name ?? ""}</span>
-              <button onClick={() => void signOut()} title="Se déconnecter" aria-label="Se déconnecter" className="grid size-8 place-items-center rounded text-ink-3 hover:bg-hover hover:text-ink">
+              <button onClick={() => void signOut()} title="Se déconnecter" aria-label="Se déconnecter" className="grid size-8 place-items-center text-ink-3 hover:bg-hover hover:text-ink">
                 <LogOut className="size-4" />
               </button>
             </div>
@@ -276,7 +277,7 @@ export function Workspace() {
 
       {/* ── Navigation basse (mobile) ───────────────────────── */}
       <nav
-        className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-4 border-t border-line bg-canvas/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+        className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-4 border-t border-line bg-canvas pb-[env(safe-area-inset-bottom)] md:hidden"
         aria-label="Navigation"
       >
         <TabButton active={view === "today"} onClick={() => setView("today")} icon={Sun} label="Aujourd'hui" badge={c.overdue || undefined} />
@@ -286,7 +287,7 @@ export function Workspace() {
       </nav>
 
       {!online && (
-        <div role="status" className="fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom))] z-30 mx-auto flex w-fit items-center gap-2 rounded-md bg-ink px-3 py-2 text-xs text-white md:bottom-6">
+        <div role="status" className="fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom))] z-30 mx-auto flex w-fit items-center gap-2 bg-ink px-3 py-2 text-xs text-white md:bottom-6">
           <WifiOff className="size-3.5" aria-hidden /> Hors ligne : les modifications seront envoyées à la reconnexion.
         </div>
       )}
@@ -307,12 +308,12 @@ function ViewHeader({ view, counts: c, workstream }: { view: View; counts: Retur
             ? `${c.done} terminée${c.done > 1 ? "s" : ""}`
             : "Rappels, résumé du matin, Telegram";
   return (
-    <div className="mb-4 flex items-end justify-between gap-4 border-b border-ink pb-3">
+    <div className="mb-4 flex items-end justify-between gap-4 border-b-[1.5px] border-ink pb-3">
       <div>
-        <p className="text-xs font-medium tracking-wide text-ink-3 uppercase first-letter:uppercase">{view === "today" ? today : workstream ?? "FolioWork"}</p>
-        <h1 className="text-2xl font-bold tracking-tight md:text-3xl">{VIEW_LABEL[view]}</h1>
+        <p className="eyebrow mb-2 text-ink-2">{view === "today" ? today : workstream ?? "FolioWork"}</p>
+        <h1 className="text-2xl md:text-[34px] md:leading-[1.12]">{VIEW_LABEL[view]}</h1>
       </div>
-      <p className={`tabular pb-1 text-xs ${c.overdue && view === "today" ? "text-danger" : "text-ink-2"}`}>{sub}</p>
+      <p className={`tabular pb-1 text-[13px] ${c.overdue && view === "today" ? "font-medium text-accent" : "text-ink-2"}`}>{sub}</p>
     </div>
   );
 }
@@ -346,8 +347,8 @@ function Skeleton() {
     <div aria-busy aria-label="Chargement">
       {Array.from({ length: 5 }, (_, i) => (
         <div key={i} className="flex h-14 items-center gap-3 border-b border-line">
-          <span className="size-5 rounded-full bg-hover" />
-          <span className="h-3 rounded bg-hover" style={{ width: `${40 + ((i * 17) % 40)}%` }} />
+          <span className="size-5 bg-hover" />
+          <span className="h-3 bg-hover" style={{ width: `${40 + ((i * 17) % 40)}%` }} />
         </div>
       ))}
     </div>
@@ -357,7 +358,7 @@ function Skeleton() {
 function RailGroup({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="mb-6">
-      <p className="mb-1.5 px-2 text-[11px] font-medium tracking-wide text-ink-3 uppercase">{title}</p>
+      <p className="eyebrow mb-3 px-2 text-ink-2">{title}</p>
       <ul>{children}</ul>
     </div>
   );
@@ -369,10 +370,10 @@ function RailItem({ active, onClick, label, count }: { active: boolean; onClick:
       <button
         onClick={onClick}
         aria-current={active ? "true" : undefined}
-        className={`flex h-8 w-full items-center rounded px-2 text-left text-sm transition-colors duration-150 ${active ? "bg-hover font-medium text-ink" : "text-ink-2 hover:bg-hover hover:text-ink"}`}
+        className={`flex h-8 w-full items-center px-2 text-left text-sm transition-colors duration-150 ${active ? "bg-hover font-medium text-ink" : "text-ink-2 hover:bg-hover hover:text-ink"}`}
       >
         <span className="flex-1 truncate">{label}</span>
-        {count ? <span className="tabular text-xs text-ink-3">{count}</span> : null}
+        {count ? <span className="tabular text-xs text-ink-2">{count}</span> : null}
       </button>
     </li>
   );
@@ -383,7 +384,7 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
     <button
       onClick={onClick}
       aria-pressed={active}
-      className={`h-8 shrink-0 rounded-md border px-3 text-sm whitespace-nowrap ${active ? "border-ink bg-ink text-white" : "border-line text-ink-2"}`}
+      className={`h-8 shrink-0 border px-3 text-[13px] whitespace-nowrap ${active ? "border-ink bg-ink text-white" : "border-line text-ink-2"}`}
     >
       {children}
     </button>
@@ -406,11 +407,17 @@ function TabButton({
   accent?: boolean;
 }) {
   return (
-    <button onClick={onClick} aria-current={active ? "page" : undefined} className={`relative flex h-16 flex-col items-center justify-center gap-0.5 text-[11px] font-medium ${accent ? "text-accent" : active ? "text-ink" : "text-ink-3"}`}>
-      <Icon className="size-5" aria-hidden strokeWidth={active || accent ? 2.25 : 1.75} />
+    <button onClick={onClick} aria-current={active ? "page" : undefined} className={`relative flex h-16 flex-col items-center justify-center gap-0.5 text-[11px] font-medium ${accent || active ? "text-ink" : "text-ink-2"}`}>
+      {accent ? (
+        <span className="grid size-7 place-items-center bg-ink text-white">
+          <Icon className="size-4" aria-hidden />
+        </span>
+      ) : (
+        <Icon className="size-5" aria-hidden />
+      )}
       {label}
       {badge ? (
-        <span className="tabular absolute top-2 left-1/2 ml-2 min-w-4 rounded-full bg-danger px-1 text-center text-[10px] leading-4 text-white">{badge}</span>
+        <span className="tabular absolute top-2 left-1/2 ml-3 text-[11px] font-medium text-accent" aria-label={`${badge} en retard`}>{badge}</span>
       ) : null}
     </button>
   );
@@ -421,12 +428,12 @@ function Avatar({ image, name, onSignOut }: { image?: string; name?: string; onS
   return (
     <div className="relative">
       <button onClick={() => setOpen((o) => !o)} aria-label="Compte" aria-expanded={open} className="grid size-11 place-items-center">
-        {image ? <img src={image} alt="" className="size-7 rounded-full" referrerPolicy="no-referrer" /> : <span className="size-7 rounded-full bg-hover" />}
+        {image ? <img src={image} alt="" className="size-7" referrerPolicy="no-referrer" /> : <span className="size-7 bg-hover" />}
       </button>
       {open && (
-        <div className="absolute top-12 right-0 w-52 rounded-md border border-line bg-canvas p-1 shadow-lg shadow-ink/5">
+        <div className="absolute top-12 right-0 w-52 border border-line bg-canvas p-1">
           <p className="truncate px-3 py-2 text-sm text-ink-2">{name}</p>
-          <button onClick={() => void onSignOut()} className="flex h-10 w-full items-center gap-2 rounded px-3 text-sm hover:bg-hover">
+          <button onClick={() => void onSignOut()} className="flex h-10 w-full items-center gap-2 px-3 text-sm hover:bg-hover">
             <LogOut className="size-4" aria-hidden /> Se déconnecter
           </button>
         </div>

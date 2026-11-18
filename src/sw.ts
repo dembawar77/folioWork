@@ -1,6 +1,9 @@
 /// <reference lib="webworker" />
 import { precacheAndRoute, cleanupOutdatedCaches, createHandlerBoundToURL } from "workbox-precaching";
 import { NavigationRoute, registerRoute } from "workbox-routing";
+import { CacheFirst, StaleWhileRevalidate } from "workbox-strategies";
+import { CacheableResponsePlugin } from "workbox-cacheable-response";
+import { ExpirationPlugin } from "workbox-expiration";
 
 declare const self: ServiceWorkerGlobalScope;
 
@@ -8,6 +11,19 @@ cleanupOutdatedCaches();
 precacheAndRoute(self.__WB_MANIFEST);
 // L'app s'ouvre même hors ligne.
 if (!import.meta.env.DEV) registerRoute(new NavigationRoute(createHandlerBoundToURL("/index.html")));
+
+// Polices de la charte (Satoshi, General Sans) servies par Fontshare : gardées en cache pour le hors-ligne.
+registerRoute(
+  ({ url }) => url.hostname === "api.fontshare.com",
+  new StaleWhileRevalidate({ cacheName: "fontshare-css", plugins: [new CacheableResponsePlugin({ statuses: [0, 200] })] }),
+);
+registerRoute(
+  ({ url }) => url.hostname === "cdn.fontshare.com",
+  new CacheFirst({
+    cacheName: "fontshare-fonts",
+    plugins: [new CacheableResponsePlugin({ statuses: [0, 200] }), new ExpirationPlugin({ maxEntries: 20, maxAgeSeconds: 365 * 86400 })],
+  }),
+);
 
 self.addEventListener("install", () => void self.skipWaiting());
 self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
@@ -41,8 +57,8 @@ self.addEventListener("push", (event) => {
       // @ts-expect-error : `actions` est géré par Chrome/Edge/Android, ignoré ailleurs.
       actions: canAct
         ? [
-            { action: "done", title: "✅ Terminé" },
-            { action: "snooze", title: "⏰ +15 min" },
+            { action: "done", title: "Terminé" },
+            { action: "snooze", title: "+15 min" },
           ]
         : [],
     }),

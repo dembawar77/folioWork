@@ -109,7 +109,7 @@ function Toolbar({ editor, status }: { editor: Editor; status: "idle" | "saving"
       aria-pressed={active}
       onMouseDown={(e) => e.preventDefault()}
       onClick={run}
-      className={`grid size-8 place-items-center rounded transition-colors duration-150 ${active ? "bg-ink text-white" : "text-ink-2 hover:bg-hover"}`}
+      className={`grid size-8 place-items-center transition-colors duration-150 ${active ? "bg-ink text-white" : "text-ink-2 hover:bg-hover"}`}
     >
       <Icon className="size-4" aria-hidden />
     </button>
@@ -130,8 +130,8 @@ function Toolbar({ editor, status }: { editor: Editor; status: "idle" | "saving"
       {btn("Cases à cocher", editor.isActive("taskList"), () => editor.chain().focus().toggleTaskList().run(), ListChecks)}
       {btn("Code", editor.isActive("code"), () => editor.chain().focus().toggleCode().run(), Code)}
       {btn("Lien", editor.isActive("link"), setLink, Link2)}
-      <span className="tabular ml-auto pr-1 text-[11px] text-ink-3" aria-live="polite">
-        {status === "saving" ? "Enregistrement…" : status === "saved" ? "Enregistré" : status === "error" ? <span className="text-danger">Échec, réessai…</span> : ""}
+      <span className="ml-auto pr-1 text-[11px] text-ink-2" aria-live="polite">
+        {status === "saving" ? "Enregistrement…" : status === "saved" ? "Enregistré" : status === "error" ? <span className="text-ink">Échec, réessai…</span> : ""}
       </span>
     </div>
   );

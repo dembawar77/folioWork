@@ -73,10 +73,10 @@ http.route({
             action: kind === "done" ? "done" : "snooze",
           });
           if (title) {
-            answer = kind === "done" ? "Tâche terminée ✅" : "Rappel dans 15 minutes ⏰";
+            answer = kind === "done" ? "Tâche terminée" : "Rappel dans 15 minutes";
             if (cq.message) {
               await tg("editMessageReplyMarkup", { chat_id: chatId, message_id: cq.message.message_id, reply_markup: { inline_keyboard: [] } });
-              await sendMessage(chatId, `${kind === "done" ? "✅" : "⏰"} ${escapeHtml(title)}`);
+              await sendMessage(chatId, `${kind === "done" ? "Terminée" : "Rappel dans 15 min"} — ${escapeHtml(title)}`);
             }
           } else answer = "Tâche introuvable";
         }
@@ -92,13 +92,13 @@ http.route({
       if (text.startsWith("/start")) {
         const code = text.split(/\s+/)[1];
         if (!code) {
-          await sendMessage(chatId, "👋 Bienvenue sur FolioWork.\n\nPour relier ce chat à votre compte, ouvrez l'app → <b>Alertes</b> → <b>Relier Telegram</b>.");
+          await sendMessage(chatId, "Bienvenue sur FolioWork.\n\nPour relier ce chat à votre compte, ouvrez l'app → <b>Alertes</b> → <b>Relier Telegram</b>.");
           return new Response("ok");
         }
         const result = await ctx.runMutation(internal.telegram.linkChat, { code, chatId, username: msg.from?.username });
         const reply =
           result === "linked"
-            ? `✅ Compte relié. Vos rappels arriveront aussi ici.\n\n${HELP}`
+            ? `Compte relié. Vos rappels arriveront aussi ici.\n\n${HELP}`
             : result === "expired"
               ? "Ce code a expiré. Générez-en un nouveau dans l'app (Alertes → Relier Telegram)."
               : "Code invalide. Générez-en un nouveau dans l'app (Alertes → Relier Telegram).";
@@ -120,10 +120,10 @@ http.route({
       if (text === "/aujourdhui" || text === "/today") {
         const digest = await ctx.runQuery(internal.tasks.todayDigest, { userId });
         const lines = digest.tasks.map((t) => {
-          const flag = t.priority === "urgent" ? "🔴 " : t.priority === "high" ? "🟠 " : "";
+          const flag = t.priority === "urgent" ? "URGENT · " : t.priority === "high" ? "HAUTE · " : "";
           return `${flag}${formatTime(t.dueAt, digest.timezone)} · ${escapeHtml(t.title)}${t.overdue ? " <i>(en retard)</i>" : ""}`;
         });
-        await sendMessage(chatId, lines.length ? `<b>Aujourd'hui</b>\n\n${lines.join("\n")}` : "Rien de prévu aujourd'hui. 🎉");
+        await sendMessage(chatId, lines.length ? `<b>Aujourd'hui</b>\n\n${lines.join("\n")}` : "Rien de prévu aujourd'hui.");
         return new Response("ok");
       }
 
@@ -134,12 +134,12 @@ http.route({
 
       const created = await ctx.runMutation(internal.tasks.createFromText, { userId, text });
       const parts = [
-        created.dueAt ? `📅 ${escapeHtml(formatDue(created.dueAt, created.timezone))}` : "📅 Sans échéance",
-        created.workstream ? `🏷 ${escapeHtml(created.workstream)}` : null,
-        created.priority !== "normal" ? `⚑ ${PRIORITY_LABEL[created.priority]}` : null,
+        created.dueAt ? `Échéance : ${escapeHtml(formatDue(created.dueAt, created.timezone))}` : "Sans échéance",
+        created.workstream ? `Catégorie : ${escapeHtml(created.workstream)}` : null,
+        created.priority !== "normal" ? `Priorité : ${PRIORITY_LABEL[created.priority]}` : null,
       ].filter(Boolean);
-      await sendMessage(chatId, `➕ <b>${escapeHtml(created.title)}</b>\n${parts.join("\n")}`, [
-        [{ text: "✅ Terminé", callback_data: `done:${created.id}` }],
+      await sendMessage(chatId, `Ajoutée — <b>${escapeHtml(created.title)}</b>\n${parts.join("\n")}`, [
+        [{ text: "Terminé", callback_data: `done:${created.id}` }],
       ]);
     } catch (err) {
       console.error("Erreur webhook Telegram", err);

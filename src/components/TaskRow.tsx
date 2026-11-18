@@ -54,14 +54,14 @@ export function TaskRow({
   const meta: React.ReactNode[] = [];
   if (task.priority === "urgent" || task.priority === "high") {
     meta.push(
-      <span key="p" className={task.priority === "urgent" ? "font-medium text-danger" : "font-medium text-warn"}>
+      <span key="p" className={`eyebrow ${task.priority === "urgent" ? "text-ink" : "text-ink-2"}`}>
         {PRIORITY_LABEL[task.priority]}
       </span>,
     );
   }
   if (task.dueAt !== undefined) {
     meta.push(
-      <span key="d" className={`tabular ${overdue ? "text-danger" : soon ? "text-warn" : ""}`}>
+      <span key="d" className={`tabular ${overdue ? "font-medium text-ink" : soon ? "text-ink" : ""}`}>
         {overdue ? "En retard · " : ""}
         {formatDueShort(task.dueAt)}
       </span>,
@@ -89,8 +89,8 @@ export function TaskRow({
           className="-ml-2.5 grid size-11 shrink-0 place-items-center"
         >
           <span
-            className={`grid size-5 place-items-center rounded-full border transition-colors duration-150 ${
-              task.completed ? "border-ok bg-ok text-white" : task.priority === "urgent" ? "border-danger" : "border-ink-3 hover:border-ink"
+            className={`grid size-5 place-items-center border transition-colors duration-150 ${
+              task.completed ? "border-ink bg-ink text-white" : task.priority === "urgent" ? "border-[1.5px] border-ink" : "border-ink-3 hover:border-ink"
             }`}
           >
             {task.completed && (
@@ -107,7 +107,7 @@ export function TaskRow({
               {meta.length > 0 && <Meta items={meta} />}
             </div>
             <button type="button" onClick={onToggleExpand} aria-expanded aria-label="Refermer" className="grid size-11 shrink-0 place-items-center">
-              <ChevronDown className="size-4 rotate-180 text-ink-3 transition-transform duration-200 ease-out-expo" aria-hidden />
+              <ChevronDown className="size-4 rotate-180 text-ink-3 transition-transform duration-200 ease-brand" aria-hidden />
             </button>
           </>
         ) : (
@@ -117,7 +117,7 @@ export function TaskRow({
               {meta.length > 0 && <Meta items={meta} />}
             </span>
             <span className="grid size-11 shrink-0 place-items-center">
-              <ChevronDown className="size-4 text-ink-3 transition-transform duration-200 ease-out-expo" aria-hidden />
+              <ChevronDown className="size-4 text-ink-3 transition-transform duration-200 ease-brand" aria-hidden />
             </span>
           </button>
         )}
@@ -211,13 +211,13 @@ function TaskDetail({ task, workstreams, defaultOffset }: { task: Task; workstre
         </Field>
       </div>
 
-      <div className="mt-4 rounded-md border border-line bg-canvas p-3">
+      <div className="mt-4 border border-line bg-canvas p-3">
         <Suspense fallback={<div className="h-24" aria-busy />}>
           <NoteEditor key={task._id} initial={task.note} onChange={(c) => saveNote({ id, ...c })} />
         </Suspense>
       </div>
 
-      <div className="mt-3 flex items-center justify-between text-xs text-ink-3">
+      <div className="mt-3 flex items-center justify-between text-xs text-ink-2">
         <span className="tabular">
           Créée le {new Date(task._creationTime).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
           {task.reminderSentAt ? " · rappel envoyé" : ""}
@@ -225,13 +225,13 @@ function TaskDetail({ task, workstreams, defaultOffset }: { task: Task; workstre
         <button
           type="button"
           onClick={() => window.confirm(`Supprimer « ${task.title} » ?`) && run(remove({ id }))}
-          className="inline-flex h-9 items-center gap-1.5 rounded px-2 text-ink-2 hover:bg-hover hover:text-danger"
+          className="inline-flex h-9 items-center gap-1.5 px-2 text-ink-2 hover:bg-hover hover:text-ink"
         >
           <Trash2 className="size-3.5" aria-hidden /> Supprimer
         </button>
       </div>
       {error && (
-        <p role="alert" className="mt-2 text-xs text-danger">
+        <p role="alert" className="mt-2 text-xs text-ink">
           {error}
         </p>
       )}
@@ -242,7 +242,7 @@ function TaskDetail({ task, workstreams, defaultOffset }: { task: Task; workstre
 function Field({ label, icon: Icon, children }: { label: string; icon?: typeof Bell; children: React.ReactNode }) {
   return (
     <label className="block border-b border-line pb-1.5">
-      <span className="mb-0.5 flex items-center gap-1 text-[11px] font-medium tracking-wide text-ink-3 uppercase">
+      <span className="eyebrow mb-1.5 flex items-center gap-1 text-ink-2">
         {Icon && <Icon className="size-3" aria-hidden />}
         {label}
       </span>
@@ -281,7 +281,7 @@ function TitleInput({ task }: { task: Task }) {
       onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
       aria-label="Titre de la tâche"
       maxLength={300}
-      className={`block w-full rounded-sm bg-transparent font-medium outline-none focus:bg-canvas focus:ring-1 focus:ring-line ${task.completed ? "text-ink-3 line-through" : ""}`}
+      className={`block w-full bg-transparent font-medium outline-none focus:bg-canvas ${task.completed ? "text-ink-3 line-through" : ""}`}
     />
   );
 }

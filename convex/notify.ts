@@ -94,7 +94,7 @@ export const fireReminder = internalAction({
         actionUrl: `${process.env.CONVEX_SITE_URL}/push/action`,
       },
       {
-        html: `⏰ <b>${escapeHtml(task.title)}</b>\nÉchéance ${escapeHtml(when)}${meta ? `\n${escapeHtml(meta)}` : ""}${
+        html: `<b>${escapeHtml(task.title)}</b>\nÉchéance ${escapeHtml(when)}${meta ? `\n${escapeHtml(meta)}` : ""}${
           preview ? `\n\n<i>${escapeHtml(preview)}</i>` : ""
         }`,
         buttons: reminderButtons(taskId),
@@ -119,15 +119,15 @@ export const fireDailySummary = internalAction({
         : [overdue ? `${overdue} en retard` : null, ...top].filter(Boolean).join("\n");
 
     const lines = digest.tasks.slice(0, 10).map((t) => {
-      const flag = t.priority === "urgent" ? "🔴 " : t.priority === "high" ? "🟠 " : "";
+      const flag = t.priority === "urgent" ? "URGENT · " : t.priority === "high" ? "HAUTE · " : "";
       const late = t.overdue ? " <i>(en retard)</i>" : "";
       return `${flag}${formatTime(t.dueAt, digest.timezone)} · ${escapeHtml(t.title)}${late}`;
     });
     await deliver(
       ctx,
       userId,
-      { title: `Bonjour ! ${title}`, body, tag: "daily-summary", url: "/" },
-      { html: `☀️ <b>${title}</b>\n\n${lines.join("\n") || "Rien de prévu aujourd'hui."}` },
+      { title: `Bonjour. ${title}`, body, tag: "daily-summary", url: "/" },
+      { html: `<b>${title}</b>\n\n${lines.join("\n") || "Rien de prévu aujourd'hui."}` },
     );
   },
 });
@@ -138,8 +138,8 @@ export const sendTest = internalAction({
     return await deliver(
       ctx,
       userId,
-      { title: "FolioWork fonctionne ✅", body: "Les rappels arriveront sur cet appareil.", tag: "test", url: "/?view=alerts" },
-      { html: "✅ <b>Test FolioWork</b>\nLes rappels arriveront aussi ici." },
+      { title: "FolioWork fonctionne", body: "Les rappels arriveront sur cet appareil.", tag: "test", url: "/?view=alerts" },
+      { html: "<b>Test FolioWork</b>\nLes rappels arriveront aussi ici." },
     );
   },
 });

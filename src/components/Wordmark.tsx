@@ -1,0 +1,9 @@
+/** Mot-symbole FolioWork : Satoshi Medium, point Bleu Eloïse (le signal de la zone). */
+export function Wordmark({ muted = false, className = "" }: { muted?: boolean; className?: string }) {
+  return (
+    <span className={`inline-flex items-baseline font-display text-lg font-medium tracking-[-0.02em] ${muted ? "text-ink-3" : "text-ink"} ${className}`}>
+      FolioWork
+      <span aria-hidden className={`ml-0.5 inline-block size-[6px] ${muted ? "bg-ink-3" : "bg-accent"}`} />
+    </span>
+  );
+}

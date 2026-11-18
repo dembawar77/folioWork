@@ -1,28 +1,28 @@
+/* Une requête par famille : Fontshare ignore la seconde famille d'une requête groupée. */
+@import url("https://api.fontshare.com/v2/css?f[]=satoshi@500&display=swap");
+@import url("https://api.fontshare.com/v2/css?f[]=general-sans@400,401,500&display=swap");
 @import "tailwindcss";
-@import "@fontsource-variable/plus-jakarta-sans";
-@import "@fontsource-variable/dm-sans";
-@import "@fontsource-variable/jetbrains-mono";
 
+/* Charte Studio Eloïse : Blanc 70 / Noir 20 / signal Bleu 10.
+   Angles francs (radius 0), aucune ombre, structure par filets et espace. */
 @theme {
-  --font-display: "Plus Jakarta Sans Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-sans: "DM Sans Variable", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
+  --font-display: "Satoshi", "Helvetica Neue", Arial, sans-serif;
+  --font-sans: "General Sans", "Helvetica Neue", Arial, sans-serif;
 
   --color-canvas: #ffffff;
-  --color-alabaster: #f8fafc;
-  --color-hover: #f1f5f9;
-  --color-line: #e2e8f0;
-  --color-ink: #0f172a;
-  --color-ink-2: #475569;
-  --color-ink-3: #94a3b8;
-  --color-accent: #2563eb;
-  --color-accent-soft: #eff6ff;
-  --color-ok: #16a34a;
-  --color-warn: #d97706;
-  --color-danger: #dc2626;
+  --color-alabaster: rgba(10, 10, 10, 0.04);
+  --color-hover: rgba(10, 10, 10, 0.04);
+  --color-line: rgba(10, 10, 10, 0.14);
+  --color-line-soft: rgba(10, 10, 10, 0.08);
+  --color-ink: #0a0a0a;
+  --color-ink-2: rgba(10, 10, 10, 0.72);
+  --color-ink-3: rgba(10, 10, 10, 0.52);
+  /* Bleu Eloïse : un seul signal par zone, jamais en fond. */
+  --color-accent: #1d23e8;
 
-  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
-  --animate-reveal: reveal 200ms cubic-bezier(0.16, 1, 0.3, 1);
+  --radius-none: 0;
+  --ease-brand: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --animate-reveal: reveal 200ms cubic-bezier(0.22, 0.61, 0.36, 1);
 
   @keyframes reveal {
     from { opacity: 0; transform: translateY(-4px); }
@@ -41,12 +41,22 @@
     line-height: 1.6;
   }
   h1, h2, h3 {
-    @apply font-display;
+    @apply font-display text-ink;
+    font-weight: 500;
+    letter-spacing: -0.02em;
     text-wrap: balance;
   }
   :focus-visible {
     outline: 2px solid var(--color-accent);
     outline-offset: 2px;
+  }
+  ::selection {
+    background: var(--color-ink);
+    color: #fff;
+  }
+  /* Icônes Lucide : contour seul, trait 1,75. */
+  svg.lucide {
+    stroke-width: 1.75;
   }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
@@ -57,9 +67,17 @@
 }
 
 @utility tabular {
-  font-family: var(--font-mono);
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.01em;
+}
+
+/* Surtitre : capitales, interlettrage large. */
+@utility eyebrow {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 /* Tiptap */
@@ -68,19 +86,19 @@
   min-height: 4.5rem;
 }
 .note-editor .ProseMirror > * + * { margin-top: 0.5em; }
-.note-editor .ProseMirror h2 { font-size: 1.05rem; font-weight: 700; margin-top: 1em; }
-.note-editor .ProseMirror h3 { font-size: 0.95rem; font-weight: 600; margin-top: 0.8em; }
+.note-editor .ProseMirror h2 { font-family: var(--font-display); font-size: 1.1rem; font-weight: 500; letter-spacing: -0.01em; margin-top: 1em; }
+.note-editor .ProseMirror h3 { font-family: var(--font-display); font-size: 1rem; font-weight: 500; margin-top: 0.8em; }
 .note-editor .ProseMirror ul:not([data-type="taskList"]) { list-style: disc; padding-left: 1.25rem; }
 .note-editor .ProseMirror ol { list-style: decimal; padding-left: 1.25rem; }
-.note-editor .ProseMirror code { font-family: var(--font-mono); font-size: 0.85em; background: var(--color-hover); padding: 0.1em 0.35em; border-radius: 4px; }
-.note-editor .ProseMirror pre { font-family: var(--font-mono); font-size: 0.85em; background: var(--color-alabaster); border: 1px solid var(--color-line); padding: 0.75rem 1rem; border-radius: 6px; overflow-x: auto; }
+.note-editor .ProseMirror code { font-size: 0.9em; background: var(--color-hover); padding: 0.1em 0.35em; }
+.note-editor .ProseMirror pre { font-size: 0.9em; background: var(--color-alabaster); border: 1px solid var(--color-line); padding: 0.75rem 1rem; overflow-x: auto; }
 .note-editor .ProseMirror pre code { background: none; padding: 0; }
 .note-editor .ProseMirror a { color: var(--color-accent); text-decoration: underline; text-underline-offset: 2px; }
-.note-editor .ProseMirror blockquote { border-left: 2px solid var(--color-line); padding-left: 0.75rem; color: var(--color-ink-2); }
+.note-editor .ProseMirror blockquote { padding-left: 1rem; color: var(--color-ink-2); font-style: italic; }
 .note-editor .ProseMirror ul[data-type="taskList"] { list-style: none; padding: 0; }
 .note-editor .ProseMirror ul[data-type="taskList"] li { display: flex; gap: 0.6rem; align-items: flex-start; }
 .note-editor .ProseMirror ul[data-type="taskList"] li > label { margin-top: 0.3em; flex-shrink: 0; }
-.note-editor .ProseMirror ul[data-type="taskList"] li > label input { width: 1rem; height: 1rem; accent-color: var(--color-accent); }
+.note-editor .ProseMirror ul[data-type="taskList"] li > label input { width: 1rem; height: 1rem; accent-color: var(--color-ink); border-radius: 0; }
 .note-editor .ProseMirror ul[data-type="taskList"] li > div { flex: 1; }
 .note-editor .ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div { color: var(--color-ink-3); text-decoration: line-through; }
 .note-editor .ProseMirror p.is-editor-empty:first-child::before {

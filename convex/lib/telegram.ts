@@ -30,7 +30,7 @@ export function sendMessage(chatId: string, html: string, buttons?: InlineButton
 
 export function reminderButtons(taskId: string): InlineButton[][] {
   return [[
-    { text: "✅ Terminé", callback_data: `done:${taskId}` },
-    { text: "⏰ +15 min", callback_data: `snz:${taskId}` },
+    { text: "Terminé", callback_data: `done:${taskId}` },
+    { text: "+15 min", callback_data: `snz:${taskId}` },
   ]];
 }

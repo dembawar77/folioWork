@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
-import { Send, Smartphone, Trash2 } from "lucide-react";
+import { Check, Send, Smartphone, Trash2, CircleAlert } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import { errorMessage } from "../lib/errors";
 import { currentSubscription, isIos, pushSupport, subscribePush } from "../lib/push";
@@ -21,7 +21,7 @@ export function AlertsPanel() {
       <SummarySection />
       <TelegramSection />
       <section className="py-6">
-        <h2 className="text-base font-semibold">Installer l'app</h2>
+        <h2 className="text-lg">Installer l'app</h2>
         <p className="mt-1 max-w-prose text-sm text-ink-2">
           Installée, FolioWork s'ouvre comme une vraie application et reçoit les rappels plus fiablement.
           {isIos() && " Sur iPhone, l'installation est obligatoire pour recevoir les notifications."}
@@ -75,11 +75,11 @@ function PushSection() {
 
   return (
     <section className="py-6">
-      <h2 className="text-base font-semibold">Notifications sur cet appareil</h2>
+      <h2 className="text-lg">Notifications sur cet appareil</h2>
       <p className="mt-1 max-w-prose text-sm text-ink-2">Chaque appareil s'active séparément : ordinateur, téléphone, tablette.</p>
 
       {!support.ok ? (
-        <p className="mt-3 max-w-prose text-sm text-warn">
+        <p className="mt-3 flex max-w-prose gap-2 text-sm font-medium text-ink"><CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
           {support.reason === "ios-not-installed"
             ? "Sur iPhone/iPad, installez d'abord FolioWork sur l'écran d'accueil (Partager → Sur l'écran d'accueil), puis ouvrez l'app depuis l'icône."
             : support.reason === "denied"
@@ -87,23 +87,23 @@ function PushSection() {
               : "Ce navigateur ne gère pas les notifications web. Utilisez Telegram ci-dessous."}
         </p>
       ) : vapid === null ? (
-        <p className="mt-3 text-sm text-warn">Notifications web non configurées sur le serveur (clés VAPID manquantes).</p>
+        <p className="mt-3 text-sm font-medium text-ink">Notifications web non configurées sur le serveur (clés VAPID manquantes).</p>
       ) : (
         <div className="mt-3 flex flex-wrap gap-2">
           {!thisDeviceOn ? (
-            <button onClick={enable} disabled={busy || !vapid} className="h-10 rounded-md bg-accent px-4 text-sm font-medium text-white disabled:opacity-60">
+            <button onClick={enable} disabled={busy || !vapid} className="h-10 bg-ink px-4 text-sm font-medium text-white disabled:opacity-60">
               {busy ? "Activation…" : "Activer les notifications"}
             </button>
           ) : (
-            <span className="inline-flex h-10 items-center text-sm font-medium text-ok">✓ Activées sur cet appareil</span>
+            <span className="inline-flex h-10 items-center gap-2 text-sm font-medium text-ink"><Check className="size-4" aria-hidden /> Activées sur cet appareil</span>
           )}
-          <button onClick={test} disabled={!devices?.length} className="inline-flex h-10 items-center gap-2 rounded-md border border-line px-4 text-sm font-medium hover:bg-hover disabled:opacity-50">
+          <button onClick={test} disabled={!devices?.length} className="inline-flex h-10 items-center gap-2 border border-line px-4 text-sm font-medium hover:bg-hover disabled:opacity-50">
             <Send className="size-3.5" aria-hidden /> Envoyer un test
           </button>
         </div>
       )}
       {msg && (
-        <p role="status" className={`mt-2 text-sm ${msg.kind === "ok" ? "text-ok" : "text-danger"}`}>
+        <p role="status" className={`mt-2 text-sm ${msg.kind === "ok" ? "text-ink-2" : "font-medium text-ink"}`}>
           {msg.text}
         </p>
       )}
@@ -115,12 +115,12 @@ function PushSection() {
               <Smartphone className="size-4 text-ink-3" aria-hidden />
               <span className="flex-1">
                 {d.deviceLabel}
-                {d.endpoint === endpoint && <span className="text-ink-3"> · cet appareil</span>}
+                {d.endpoint === endpoint && <span className="text-ink-2"> · cet appareil</span>}
               </span>
               <button
                 onClick={() => unsubscribe({ endpoint: d.endpoint })}
                 aria-label={`Retirer ${d.deviceLabel}`}
-                className="grid size-9 place-items-center rounded text-ink-3 hover:bg-hover hover:text-danger"
+                className="grid size-9 place-items-center text-ink-3 hover:bg-hover hover:text-ink"
               >
                 <Trash2 className="size-3.5" aria-hidden />
               </button>
@@ -146,7 +146,7 @@ function SummarySection() {
 
   return (
     <section className="py-6">
-      <h2 className="text-base font-semibold">Résumé du matin et rappels</h2>
+      <h2 className="text-lg">Résumé du matin et rappels</h2>
       <div className="mt-4 grid max-w-xl gap-4 text-sm">
         <label className="flex items-center justify-between gap-4">
           <span>
@@ -158,7 +158,7 @@ function SummarySection() {
             role="switch"
             checked={prefs.dailySummaryEnabled}
             onChange={(e) => save({ dailySummaryEnabled: e.target.checked })}
-            className="size-5 accent-accent"
+            className="size-5 accent-ink"
           />
         </label>
         <label className="flex items-center justify-between gap-4">
@@ -168,7 +168,7 @@ function SummarySection() {
             value={prefs.dailySummaryTime}
             disabled={!prefs.dailySummaryEnabled}
             onChange={(e) => e.target.value && save({ dailySummaryTime: e.target.value })}
-            className="tabular h-10 rounded-md border border-line px-2 disabled:opacity-50"
+            className="tabular h-10 border border-line px-2 disabled:opacity-50"
           />
         </label>
         <label className="flex items-center justify-between gap-4">
@@ -179,7 +179,7 @@ function SummarySection() {
           <select
             value={prefs.defaultReminderOffsetMinutes}
             onChange={(e) => save({ defaultReminderOffsetMinutes: Number(e.target.value) })}
-            className="h-10 rounded-md border border-line px-2"
+            className="h-10 border border-line px-2"
           >
             {OFFSETS.map((o) => (
               <option key={o.value} value={o.value}>
@@ -188,7 +188,7 @@ function SummarySection() {
             ))}
           </select>
         </label>
-        <p className="tabular text-xs text-ink-3">Fuseau horaire : {prefs.timezone}</p>
+        <p className="tabular text-xs text-ink-2">Fuseau horaire : {prefs.timezone}</p>
       </div>
     </section>
   );
@@ -205,19 +205,19 @@ function TelegramSection() {
 
   return (
     <section className="py-6">
-      <h2 className="text-base font-semibold">Telegram</h2>
+      <h2 className="text-lg">Telegram</h2>
       <p className="mt-1 max-w-prose text-sm text-ink-2">
         Écrivez une tâche au bot (« Relancer imprimeur jeudi 10h ») et recevez vos rappels et le résumé du matin sur Telegram.
       </p>
       {!bot ? (
-        <p className="mt-3 text-sm text-warn">Bot non configuré sur le serveur (TELEGRAM_BOT_USERNAME manquant).</p>
+        <p className="mt-3 text-sm font-medium text-ink">Bot non configuré sur le serveur (TELEGRAM_BOT_USERNAME manquant).</p>
       ) : status.linked ? (
         <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
-          <span className="font-medium text-ok">✓ Relié{status.username ? ` à @${status.username}` : ""}</span>
+          <span className="inline-flex items-center gap-2 font-medium text-ink"><Check className="size-4" aria-hidden /> Relié{status.username ? ` à @${status.username}` : ""}</span>
           <a href={`https://t.me/${bot}`} target="_blank" rel="noreferrer" className="text-accent underline underline-offset-2">
             Ouvrir @{bot}
           </a>
-          <button onClick={() => unlink()} className="text-ink-2 underline underline-offset-2 hover:text-danger">
+          <button onClick={() => unlink()} className="text-ink-2 underline underline-offset-2 hover:text-ink">
             Délier
           </button>
         </div>
@@ -227,7 +227,7 @@ function TelegramSection() {
             href={`https://t.me/${bot}?start=${code}`}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex h-10 items-center rounded-md bg-accent px-4 font-medium text-white"
+            className="inline-flex h-10 items-center bg-ink px-4 font-medium text-white"
           >
             Ouvrir Telegram et relier
           </a>
@@ -236,7 +236,7 @@ function TelegramSection() {
           </p>
         </div>
       ) : (
-        <button onClick={async () => setCode(await createCode())} className="mt-3 h-10 rounded-md border border-line px-4 text-sm font-medium hover:bg-hover">
+        <button onClick={async () => setCode(await createCode())} className="mt-3 h-10 border border-line px-4 text-sm font-medium hover:bg-hover">
           Relier Telegram
         </button>
       )}
