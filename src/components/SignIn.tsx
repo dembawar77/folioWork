@@ -1,0 +1,86 @@
+import { useState } from "react";
+import { useSignInWithGoogle, useOauth } from "@convex-dev/auth/methods/google/react";
+import { api } from "../../convex/_generated/api";
+
+const POINTS = [
+  { k: "01", t: "Synchronisé partout", d: "Une tâche notée sur l'ordinateur apparaît aussitôt sur le téléphone." },
+  { k: "02", t: "Notes sous chaque tâche", d: "Comptes rendus, listes à cocher et liens, au même endroit que l'action." },
+  { k: "03", t: "Rappels à l'heure exacte", d: "Notification sur vos appareils et sur Telegram, même app fermée." },
+];
+
+export function SignIn() {
+  const { signIn } = useSignInWithGoogle(api.auth);
+  const { flowError } = useOauth();
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function start() {
+    setPending(true);
+    setError(null);
+    const res = await signIn();
+    if (res.status === "error") {
+      setError("Connexion impossible pour le moment. Réessayez.");
+      setPending(false);
+    }
+  }
+
+  return (
+    <main className="mx-auto flex min-h-dvh max-w-5xl flex-col px-4 pt-6 pb-10 sm:px-8 sm:pt-10">
+      <header className="flex items-center justify-between border-b border-line pb-4">
+        <span className="font-display text-lg font-bold tracking-tight">
+          Folio<span className="text-accent">Work</span>
+        </span>
+        <span className="tabular text-xs text-ink-3">v0.1</span>
+      </header>
+
+      <section className="grid flex-1 content-center gap-12 py-12 lg:grid-cols-[1.2fr_1fr] lg:gap-16">
+        <div>
+          <h1 className="text-4xl leading-[1.08] font-bold tracking-tight sm:text-5xl">
+            Vos tâches, vos notes, <br className="hidden sm:block" />
+            vos rappels. Un seul endroit.
+          </h1>
+          <p className="mt-5 max-w-md text-ink-2">
+            Écrivez « Brief campagne vendredi 9h #Créa » : FolioWork comprend la date, classe la tâche et vous la rappelle
+            à l'heure.
+          </p>
+          <button
+            onClick={start}
+            disabled={pending}
+            className="mt-8 inline-flex h-12 items-center gap-3 rounded-md bg-ink px-5 font-medium text-white transition-[transform,opacity] duration-150 ease-out-expo hover:opacity-90 active:scale-[0.98] disabled:opacity-60"
+          >
+            <GoogleMark />
+            {pending ? "Redirection…" : "Continuer avec Google"}
+          </button>
+          {(error || flowError) && (
+            <p role="alert" className="mt-3 text-sm text-danger">
+              {error ?? "La connexion a échoué. Réessayez."}
+            </p>
+          )}
+        </div>
+
+        <ol className="divide-y divide-line border-y border-line">
+          {POINTS.map((p) => (
+            <li key={p.k} className="grid grid-cols-[2.5rem_1fr] gap-2 py-5">
+              <span className="tabular pt-0.5 text-xs text-ink-3">{p.k}</span>
+              <div>
+                <h2 className="text-[15px] font-semibold">{p.t}</h2>
+                <p className="mt-1 text-sm text-ink-2">{p.d}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </section>
+    </main>
+  );
+}
+
+function GoogleMark() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+      <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z" />
+      <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z" />
+      <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z" />
+      <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z" />
+    </svg>
+  );
+}
