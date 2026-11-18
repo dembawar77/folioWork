@@ -3,7 +3,7 @@
 Tâches de travail et notes riches, synchronisées en temps réel entre ordinateur et mobile, avec rappels à l'heure exacte
 (notifications web + bot Telegram) et résumé du matin.
 
-**Mise en ligne : voir [SETUP.md](SETUP.md).**
+**Mise en ligne : voir [SETUP.md](SETUP.md). Utilisation : voir [MODE-EMPLOI.md](MODE-EMPLOI.md).**
 
 ## Stack
 
