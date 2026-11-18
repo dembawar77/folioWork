@@ -1,6 +1,6 @@
 # Mettre FolioWork en ligne
 
-Tout se fait depuis des pages web, **sans terminal**. Compte environ 30 minutes la première fois.
+Tout se fait depuis des pages web, **sans terminal**. Les intitulés sont donnés tels qu'ils apparaissent : en français pour Google et Cloudflare, en anglais pour Convex (son tableau de bord n'existe qu'en anglais). Compte environ 30 minutes la première fois.
 Coût : 0 FCFA (offres gratuites de Convex, Cloudflare, Google et Telegram).
 
 Ordre à respecter : **1 → 6**. Chaque étape a besoin de la précédente.
@@ -19,13 +19,16 @@ Ordre à respecter : **1 → 6**. Chaque étape a besoin de la précédente.
 
 ## 2. Google (le bouton « Continuer avec Google »)
 
-1. Allez sur **console.cloud.google.com** → créez un projet `FolioWork`.
-2. **APIs & Services → OAuth consent screen** : type *Externe*, nom `FolioWork`, votre e-mail. Ajoutez-vous comme utilisateur test (ou publiez l'app).
-3. **APIs & Services → Credentials → Create credentials → OAuth client ID** :
-   - Type : **Web application**
-   - **Authorized redirect URI** : `https://VOTRE-DEPLOIEMENT.convex.site/oauth/google/callback`
+La console Google s'affiche en français.
+
+1. Allez sur **console.cloud.google.com** → **Sélectionner un projet** → **Nouveau projet** → nom : `FolioWork`.
+2. Menu ☰ → **API et services** → **Écran de consentement OAuth** (ou **Google Auth Platform**) : type d'utilisateur *Externe*, nom de l'application `FolioWork`, votre e-mail. Dans **Audience** / **Utilisateurs tests**, ajoutez votre adresse Gmail (ou publiez l'application).
+3. **API et services** → **Identifiants** → **Créer des identifiants** → **ID client OAuth** :
+   - Type d'application : **Application Web**
+   - **URI de redirection autorisés** → **Ajouter un URI** : `https://VOTRE-DEPLOIEMENT.convex.site/oauth/google/callback`
      (l'adresse `.convex.site` de l'étape 1, suivie de `/oauth/google/callback`)
-4. Copiez le **Client ID** et le **Client secret**.
+   - **Créer**
+4. Copiez l'**ID client** et le **Code secret du client**.
 
 ## 3. Telegram (le bot)
 
@@ -50,16 +53,26 @@ Les trois dernières clés (`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `TELEGRAM_W
 
 ## 5. Cloudflare Pages (l'hébergement)
 
-1. **dash.cloudflare.com → Workers & Pages → Create → Pages → Connect to Git** → choisissez le dépôt `folioWork`.
-2. Réglages de build :
-   - **Framework preset** : None
-   - **Build command** : `npm run build:cloudflare`
-   - **Build output directory** : `dist`
-3. **Environment variables** (Production) :
+Le tableau de bord Cloudflare s'affiche en français.
+
+1. **dash.cloudflare.com** → menu de gauche **Calcul** → **Workers et Pages** → **Créer une application**.
+2. L'écran propose d'abord *Workers* : choisissez l'onglet ou le lien **Pages** (« Vous cherchez à déployer Pages ? Commencer »).
+3. **Importer un dépôt Git** (ou **Connecter à Git**) → connectez GitHub → dépôt **folioWork** → **Commencer la configuration**.
+4. Remplissez :
+
+   | Champ | Valeur |
+   |---|---|
+   | Nom du projet | `foliowork` |
+   | Branche de production | la branche du code (ex. `main`) |
+   | Préréglage de framework | **Aucun** |
+   | Commande de build | `npm run build:cloudflare` |
+   | Répertoire de sortie de build | `dist` |
+
+5. **Variables d'environnement (avancé)** → ajoutez :
    - `CONVEX_DEPLOY_KEY` = la Deploy Key de l'étape 1
    - `NODE_VERSION` = `22`
-4. **Save and Deploy**. Chaque build envoie aussi le backend sur Convex.
-5. L'adresse finale est `https://NOM-DU-PROJET.pages.dev`. Si elle diffère de celle mise dans `SITE_URL`, corrigez `SITE_URL` dans Convex.
+6. **Enregistrer et déployer**. Chaque build envoie aussi le backend sur Convex.
+7. L'adresse finale est `https://NOM-DU-PROJET.pages.dev`. Si elle diffère de celle mise dans `SITE_URL`, corrigez `SITE_URL` dans Convex.
 
 ## 6. Clés de notification et branchement du bot
 
