@@ -10,8 +10,34 @@
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>FolioWork</title>
+    <style>
+      /* Écran de lancement : affiché avant même le chargement du script, retiré par l'app. */
+      #splash { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: #fff;
+        transition: opacity 260ms cubic-bezier(0.22, 0.61, 0.36, 1), transform 260ms cubic-bezier(0.22, 0.61, 0.36, 1); }
+      #splash.out { opacity: 0; transform: scale(1.04); pointer-events: none; }
+      #splash .wm { display: inline-flex; align-items: baseline; font: 500 30px/1.1 "Satoshi", "Helvetica Neue", Arial, sans-serif;
+        letter-spacing: -0.02em; color: #0a0a0a; }
+      #splash .w { display: inline-block; overflow: hidden; padding-bottom: 0.08em; }
+      #splash .w > span { display: inline-block; transform: translateY(105%); animation: fw-up 520ms cubic-bezier(0.22, 0.61, 0.36, 1) forwards; }
+      #splash .folio > span { color: #1d23e8; }
+      #splash .work > span { animation-delay: 110ms; }
+      #splash .dot { position: relative; display: inline-block; width: 8px; height: 8px; margin-left: 4px; border-radius: 50%;
+        background: #1d23e8; transform: scale(0); animation: fw-pop 380ms cubic-bezier(0.34, 1.56, 0.64, 1) 420ms forwards; }
+      #splash .dot::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 1.5px solid #1d23e8; opacity: 0;
+        animation: fw-ping 1400ms cubic-bezier(0.22, 0.61, 0.36, 1) 820ms infinite; }
+      @keyframes fw-up { to { transform: translateY(0); } }
+      @keyframes fw-pop { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+      @keyframes fw-ping { 0% { transform: scale(1); opacity: 0.6; } 80%, 100% { transform: scale(3.2); opacity: 0; } }
+      @media (prefers-reduced-motion: reduce) {
+        #splash .w > span, #splash .dot { animation: none; transform: none; }
+        #splash .dot::after { animation: none; }
+      }
+    </style>
   </head>
   <body>
+    <div id="splash" role="status" aria-label="Chargement de FolioWork">
+      <span class="wm" aria-hidden="true"><span class="w folio"><span>Folio</span></span><span class="w work"><span>Work</span></span><span class="dot"></span></span>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

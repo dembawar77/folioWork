@@ -5,6 +5,7 @@ import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { api } from "../convex/_generated/api";
 import { App } from "./App";
 import { registerServiceWorker } from "./lib/push";
+import { hideSplash } from "./lib/splash";
 import "./index.css";
 
 const url = import.meta.env.VITE_CONVEX_URL as string | undefined;
@@ -26,6 +27,7 @@ const url = import.meta.env.VITE_CONVEX_URL as string | undefined;
 const root = createRoot(document.getElementById("root")!);
 
 if (!url) {
+  hideSplash();
   root.render(
     <div className="p-8 font-sans text-ink-2">
       <p>
