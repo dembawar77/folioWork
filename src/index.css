@@ -23,6 +23,13 @@
   --color-alert: #c8102e;
   /* Ambre : échéance dans moins de 2 h, toujours accompagné du texte « Dans … » (contraste 5:1). */
   --color-soon: #b45309;
+  /* Texte posé sur un aplat de couleur (bouton, pastille, bandeau). */
+  --color-on-ink: #ffffff;
+  --color-on-accent: #ffffff;
+  --color-on-alert: #ffffff;
+  --color-on-soon: #ffffff;
+  /* Voile derrière une fenêtre (« Nouvelle tâche »). */
+  --color-scrim: rgba(10, 10, 10, 0.4);
 
   --radius-none: 0;
   --ease-brand: cubic-bezier(0.22, 0.61, 0.36, 1);
@@ -50,6 +57,32 @@
   }
 }
 
+/* Mode sombre : même charte inversée (fond noir, texte blanc cassé), couleurs éclaircies
+   pour garder le contraste (bleu 5,9:1, rouge 7:1, ambre 9:1). L'attribut est posé par
+   index.html / src/lib/theme.ts selon le réglage « Apparence » (automatique par défaut). */
+:root {
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --color-canvas: #0e0e10;
+  --color-alabaster: rgba(242, 242, 239, 0.04);
+  --color-hover: rgba(242, 242, 239, 0.07);
+  --color-line: rgba(242, 242, 239, 0.16);
+  --color-line-soft: rgba(242, 242, 239, 0.09);
+  --color-ink: #f2f2ef;
+  --color-ink-2: rgba(242, 242, 239, 0.72);
+  --color-ink-3: rgba(242, 242, 239, 0.52);
+  --color-accent: #7b81ff;
+  --color-alert: #ff6b78;
+  --color-soon: #f0a43a;
+  --color-on-ink: #0e0e10;
+  --color-on-accent: #0e0e10;
+  --color-on-alert: #0e0e10;
+  --color-on-soon: #0e0e10;
+  --color-scrim: rgba(0, 0, 0, 0.6);
+}
+
 @layer base {
   html {
     -webkit-tap-highlight-color: transparent;
@@ -72,7 +105,7 @@
   }
   ::selection {
     background: var(--color-ink);
-    color: #fff;
+    color: var(--color-canvas);
   }
   /* Icônes Lucide : contour seul, trait 1,75. */
   svg.lucide {

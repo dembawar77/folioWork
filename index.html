@@ -10,20 +10,33 @@
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>FolioWork</title>
+    <script>
+      // Apparence appliquée avant le premier affichage (pas de flash blanc en mode sombre).
+      (function () {
+        var pref = null;
+        try { pref = localStorage.getItem("fw-theme"); } catch (e) {}
+        var dark = pref === "dark" || (pref !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.dataset.theme = dark ? "dark" : "light";
+        document.querySelector('meta[name="theme-color"]').setAttribute("content", dark ? "#0e0e10" : "#ffffff");
+      })();
+    </script>
     <style>
+      :root { --sp-bg: #fff; --sp-ink: #0a0a0a; --sp-acc: #1d23e8; }
+      :root[data-theme="dark"] { --sp-bg: #0e0e10; --sp-ink: #f2f2ef; --sp-acc: #7b81ff; }
+      html, body { background: var(--sp-bg); }
       /* Écran de lancement : affiché avant même le chargement du script, retiré par l'app. */
-      #splash { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: #fff;
+      #splash { position: fixed; inset: 0; z-index: 100; display: grid; place-items: center; background: var(--sp-bg);
         transition: opacity 260ms cubic-bezier(0.22, 0.61, 0.36, 1), transform 260ms cubic-bezier(0.22, 0.61, 0.36, 1); }
       #splash.out { opacity: 0; transform: scale(1.04); pointer-events: none; }
       #splash .wm { display: inline-flex; align-items: baseline; font: 500 30px/1.1 "Satoshi", "Helvetica Neue", Arial, sans-serif;
-        letter-spacing: -0.02em; color: #0a0a0a; }
+        letter-spacing: -0.02em; color: var(--sp-ink); }
       #splash .w { display: inline-block; overflow: hidden; padding-bottom: 0.08em; }
       #splash .w > span { display: inline-block; transform: translateY(105%); animation: fw-up 520ms cubic-bezier(0.22, 0.61, 0.36, 1) forwards; }
-      #splash .folio > span { color: #1d23e8; }
+      #splash .folio > span { color: var(--sp-acc); }
       #splash .work > span { animation-delay: 110ms; }
       #splash .dot { position: relative; display: inline-block; width: 8px; height: 8px; margin-left: 4px; border-radius: 50%;
-        background: #1d23e8; transform: scale(0); animation: fw-pop 380ms cubic-bezier(0.34, 1.56, 0.64, 1) 420ms forwards; }
-      #splash .dot::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 1.5px solid #1d23e8; opacity: 0;
+        background: var(--sp-acc); transform: scale(0); animation: fw-pop 380ms cubic-bezier(0.34, 1.56, 0.64, 1) 420ms forwards; }
+      #splash .dot::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 1.5px solid var(--sp-acc); opacity: 0;
         animation: fw-ping 1400ms cubic-bezier(0.22, 0.61, 0.36, 1) 820ms infinite; }
       @keyframes fw-up { to { transform: translateY(0); } }
       @keyframes fw-pop { 0% { transform: scale(0); } 100% { transform: scale(1); } }

@@ -61,7 +61,7 @@ export function IntakePage({ slug }: { slug: string }) {
               <p className="mt-3 text-ink-2">Pour faire votre demande, utilisez désormais la nouvelle adresse.</p>
               <a
                 href={`/demande/${info.newSlug}`}
-                className="mt-8 inline-flex h-12 items-center rounded-full bg-accent px-6 text-[15px] font-medium text-white"
+                className="mt-8 inline-flex h-12 items-center rounded-full bg-accent px-6 text-[15px] font-medium text-on-accent"
               >
                 Aller au formulaire
               </a>
@@ -77,7 +77,7 @@ export function IntakePage({ slug }: { slug: string }) {
         </section>
       ) : sent ? (
         <section className="animate-reveal py-16">
-          <span className="grid size-12 place-items-center rounded-full bg-accent text-white">
+          <span className="grid size-12 place-items-center rounded-full bg-accent text-on-accent">
             <Check className="size-6" aria-hidden />
           </span>
           <h1 className="mt-6 text-3xl">Demande envoyée.</h1>
@@ -143,7 +143,7 @@ export function IntakePage({ slug }: { slug: string }) {
           <button
             type="submit"
             disabled={busy || !phoneOk}
-            className="mt-8 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-accent text-[15px] font-medium text-white transition-opacity duration-200 ease-brand hover:opacity-90 disabled:opacity-50"
+            className="mt-8 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-accent text-[15px] font-medium text-on-accent transition-opacity duration-200 ease-brand hover:opacity-90 disabled:opacity-50"
           >
             <ArrowUp className="size-4" aria-hidden /> {busy ? "Envoi…" : "Envoyer la demande"}
           </button>

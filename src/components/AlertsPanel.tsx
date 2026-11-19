@@ -9,6 +9,7 @@ import { InstallButton } from "./InstallButton";
 import { IntakeSection } from "./IntakeSection";
 import { backupName, collectBackup, saveFile, toCsv, toJson, type Backup } from "../lib/backup";
 import { useConnected } from "../lib/offline";
+import { getThemePref, setThemePref, type ThemePref } from "../lib/theme";
 
 const OFFSETS = [
   { value: 0, label: "À l'heure" },
@@ -24,6 +25,7 @@ export function AlertsPanel() {
       <SummarySection />
       <TelegramSection />
       <IntakeSection />
+      <AppearanceSection />
       <BackupSection />
       <section className="py-6">
         <h2 className="text-lg">Installer l'app</h2>
@@ -100,7 +102,7 @@ function PushSection() {
       ) : (
         <div className="mt-3 flex flex-wrap gap-2">
           {!thisDeviceOn ? (
-            <button onClick={enable} disabled={busy || !vapid} className="h-10 rounded-full bg-accent px-5 text-sm font-medium text-white disabled:opacity-60">
+            <button onClick={enable} disabled={busy || !vapid} className="h-10 rounded-full bg-accent px-5 text-sm font-medium text-on-accent disabled:opacity-60">
               {busy ? "Activation…" : "Activer les notifications"}
             </button>
           ) : (
@@ -238,7 +240,7 @@ function TelegramSection() {
             href={`https://t.me/${bot}?start=${code}`}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex h-10 items-center rounded-full bg-accent px-5 font-medium text-white"
+            className="inline-flex h-10 items-center rounded-full bg-accent px-5 font-medium text-on-accent"
           >
             Ouvrir Telegram et relier
           </a>
@@ -331,7 +333,7 @@ function BackupSection() {
           <button
             onClick={() => void prepare()}
             disabled={state.kind === "busy" || !connected}
-            className="inline-flex h-10 items-center gap-2 rounded-full bg-ink px-5 text-sm font-medium text-white transition-opacity duration-200 hover:opacity-90 disabled:opacity-40"
+            className="inline-flex h-10 items-center gap-2 rounded-full bg-ink px-5 text-sm font-medium text-on-ink transition-opacity duration-200 hover:opacity-90 disabled:opacity-40"
           >
             <Download className="size-4" aria-hidden />
             {state.kind === "busy" ? `Préparation… ${state.n || ""}` : "Exporter mes données"}
@@ -345,7 +347,7 @@ function BackupSection() {
             </p>
             <button
               onClick={() => void save("json", state.data)}
-              className="inline-flex h-10 items-center gap-2 rounded-full bg-accent px-5 text-sm font-medium text-white transition-opacity duration-200 hover:opacity-90"
+              className="inline-flex h-10 items-center gap-2 rounded-full bg-accent px-5 text-sm font-medium text-on-accent transition-opacity duration-200 hover:opacity-90"
             >
               <FileJson className="size-4" aria-hidden /> Sauvegarde complète
             </button>
@@ -369,6 +371,39 @@ function BackupSection() {
           {state.message}
         </p>
       )}
+    </section>
+  );
+}
+
+function AppearanceSection() {
+  const [pref, setPref] = useState<ThemePref>(getThemePref);
+  const options: { value: ThemePref; label: string }[] = [
+    { value: "system", label: "Automatique" },
+    { value: "light", label: "Clair" },
+    { value: "dark", label: "Sombre" },
+  ];
+  return (
+    <section className="py-6">
+      <h2 className="text-lg">Apparence</h2>
+      <p className="mt-1 max-w-prose text-sm text-ink-2">
+        Automatique suit le réglage de votre téléphone ou de votre ordinateur (sombre le soir s'il est programmé). Réglage propre à cet appareil.
+      </p>
+      <div className="mt-3 inline-flex rounded-full border border-line p-1" role="radiogroup" aria-label="Apparence">
+        {options.map((o) => (
+          <button
+            key={o.value}
+            role="radio"
+            aria-checked={pref === o.value}
+            onClick={() => {
+              setPref(o.value);
+              setThemePref(o.value);
+            }}
+            className={`h-8 rounded-full px-4 text-sm transition-colors duration-150 ${pref === o.value ? "bg-accent font-medium text-on-accent" : "text-ink-2 hover:text-ink"}`}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
     </section>
   );
 }

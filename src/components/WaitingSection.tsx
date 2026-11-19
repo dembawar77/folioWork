@@ -75,7 +75,7 @@ function WaitingStatus({ task, onEdit }: { task: Task; onEdit: () => void }) {
                 void nudged({ id });
                 setConfirming(false);
               }}
-              className="inline-flex h-10 items-center gap-2 rounded-full bg-accent px-5 text-sm font-medium text-white"
+              className="inline-flex h-10 items-center gap-2 rounded-full bg-accent px-5 text-sm font-medium text-on-accent"
             >
               <Check className="size-4" aria-hidden /> Oui, j'ai relancé
             </button>
@@ -115,7 +115,7 @@ function WaitingStatus({ task, onEdit }: { task: Task; onEdit: () => void }) {
             target="_blank"
             rel="noreferrer"
             onClick={() => setConfirming(true)}
-            className="inline-flex h-10 items-center gap-2 rounded-full bg-accent px-5 text-sm font-medium text-white transition-opacity duration-200 ease-brand hover:opacity-90"
+            className="inline-flex h-10 items-center gap-2 rounded-full bg-accent px-5 text-sm font-medium text-on-accent transition-opacity duration-200 ease-brand hover:opacity-90"
           >
             <MessageCircle className="size-4" aria-hidden /> Relancer sur WhatsApp
           </a>
@@ -230,7 +230,7 @@ function WaitingForm({ task, onDone }: { task: Task; onDone: () => void }) {
         </p>
       )}
       <div className="mt-3 flex gap-2">
-        <button type="submit" disabled={busy || !name.trim() || !phoneOk} className="h-10 rounded-full bg-accent px-5 text-sm font-medium text-white disabled:opacity-50">
+        <button type="submit" disabled={busy || !name.trim() || !phoneOk} className="h-10 rounded-full bg-accent px-5 text-sm font-medium text-on-accent disabled:opacity-50">
           {task.waitingFor ? "Enregistrer" : "Mettre en attente"}
         </button>
         <button type="button" onClick={onDone} className="h-10 rounded-full px-4 text-sm text-ink-2 hover:bg-hover hover:text-ink">

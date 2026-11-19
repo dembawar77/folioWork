@@ -57,7 +57,7 @@ export function IntakeSection() {
                     setCopied(true);
                     setTimeout(() => setCopied(false), 2000);
                   }}
-                  className="inline-flex h-10 items-center gap-2 rounded-full bg-accent px-5 text-sm font-medium text-white"
+                  className="inline-flex h-10 items-center gap-2 rounded-full bg-accent px-5 text-sm font-medium text-on-accent"
                 >
                   {copied ? <Check className="size-4" aria-hidden /> : <Copy className="size-4" aria-hidden />}
                   {copied ? "Lien copié" : "Copier le lien"}
@@ -113,7 +113,7 @@ export function IntakeSection() {
             />
           </label>
           <div className="flex gap-2">
-            <button onClick={() => void persist(intake?.enabled ?? true)} className="h-10 rounded-full bg-accent px-5 text-sm font-medium text-white">
+            <button onClick={() => void persist(intake?.enabled ?? true)} className="h-10 rounded-full bg-accent px-5 text-sm font-medium text-on-accent">
               {intake ? "Enregistrer" : "Activer ma boîte de dépôt"}
             </button>
             {intake && (

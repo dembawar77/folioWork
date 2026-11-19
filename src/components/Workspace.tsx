@@ -229,7 +229,7 @@ export function Workspace() {
               className="h-9 w-56 rounded-full border border-line bg-alabaster pr-3 pl-8 text-sm outline-none focus:border-accent focus:bg-canvas"
             />
           </label>
-          <button onClick={openSheet} className="inline-flex h-9 items-center gap-1.5 rounded-full bg-accent px-4 text-sm font-medium text-white transition-opacity duration-200 ease-brand hover:opacity-90">
+          <button onClick={openSheet} className="inline-flex h-9 items-center gap-1.5 rounded-full bg-accent px-4 text-sm font-medium text-on-accent transition-opacity duration-200 ease-brand hover:opacity-90">
             <Plus className="size-4" aria-hidden /> Nouvelle tâche
           </button>
         </div>
@@ -415,7 +415,7 @@ export function Workspace() {
       {toast && (
         <div
           role="status"
-          className="animate-toast fixed inset-x-4 bottom-[calc(76px+env(safe-area-inset-bottom))] z-30 mx-auto flex max-w-md items-center gap-3 rounded-full bg-ink py-2.5 pr-2 pl-5 text-sm text-white md:bottom-8"
+          className="animate-toast fixed inset-x-4 bottom-[calc(76px+env(safe-area-inset-bottom))] z-30 mx-auto flex max-w-md items-center gap-3 rounded-full bg-ink py-2.5 pr-2 pl-5 text-sm text-on-ink md:bottom-8"
         >
           <span className="min-w-0 flex-1 truncate">{toast.text}</span>
           {toast.undo && (
@@ -424,7 +424,7 @@ export function Workspace() {
                 toast.undo?.();
                 setToast(null);
               }}
-              className="h-8 shrink-0 rounded-full px-3 font-medium text-white underline underline-offset-4 hover:bg-white/10"
+              className="h-8 shrink-0 rounded-full px-3 font-medium text-on-ink underline underline-offset-4 hover:bg-on-ink/10"
             >
               Annuler
             </button>
@@ -451,7 +451,7 @@ function SyncBanner({ offline, pending }: { offline: boolean; pending: number })
   if (!offline && !slow) return null;
   const n = `${pending} modification${pending > 1 ? "s" : ""}`;
   return (
-    <div role="status" className="animate-fade sticky top-[52px] z-20 flex h-8 items-center justify-center gap-2 bg-ink px-4 text-xs text-white md:top-14">
+    <div role="status" className="animate-fade sticky top-[52px] z-20 flex h-8 items-center justify-center gap-2 bg-ink px-4 text-xs text-on-ink md:top-14">
       {offline ? <WifiOff className="size-3.5 shrink-0" aria-hidden /> : <CloudUpload className="size-3.5 shrink-0" aria-hidden />}
       <span className="truncate">
         {offline ? (pending > 0 ? `Hors ligne · ${n} en attente d'envoi` : "Hors ligne · vos tâches restent disponibles") : `Envoi de ${n}…`}
@@ -576,7 +576,7 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
     <button
       onClick={onClick}
       aria-pressed={active}
-      className={`h-9 shrink-0 rounded-full border px-4 text-[13px] whitespace-nowrap transition-colors duration-150 ${active ? "border-accent bg-accent text-white" : "border-line text-ink-2"}`}
+      className={`h-9 shrink-0 rounded-full border px-4 text-[13px] whitespace-nowrap transition-colors duration-150 ${active ? "border-accent bg-accent text-on-accent" : "border-line text-ink-2"}`}
     >
       {children}
     </button>
@@ -605,7 +605,7 @@ function TabButton({
       className={`relative flex h-[68px] flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors duration-150 ${active ? "text-accent" : "text-ink-2"}`}
     >
       {accent ? (
-        <span className={`grid size-9 place-items-center rounded-full text-white transition-colors duration-150 ${active ? "bg-accent" : "bg-ink"}`}>
+        <span className={`grid size-9 place-items-center rounded-full transition-colors duration-150 ${active ? "bg-accent text-on-accent" : "bg-ink text-on-ink"}`}>
           <Icon className="size-5" aria-hidden />
         </span>
       ) : (
@@ -617,7 +617,7 @@ function TabButton({
       {active && !accent && <span aria-hidden className="absolute top-0 left-1/2 h-0.5 w-8 -translate-x-1/2 rounded-full bg-accent" />}
       {badge ? (
         <span
-          className="tabular absolute top-2 left-1/2 ml-2.5 grid h-4 min-w-4 place-items-center rounded-full bg-alert px-1 text-[10px] font-medium text-white"
+          className="tabular absolute top-2 left-1/2 ml-2.5 grid h-4 min-w-4 place-items-center rounded-full bg-alert px-1 text-[10px] font-medium text-on-alert"
           aria-label={`${badge} en retard`}
         >
           {badge}
@@ -630,7 +630,7 @@ function TabButton({
 function AvatarImage({ image, name, size = "size-8" }: { image?: string; name?: string; size?: string }) {
   if (image) return <img src={image} alt="" className={`${size} rounded-full object-cover`} referrerPolicy="no-referrer" />;
   const initial = (name ?? "?").trim().charAt(0).toUpperCase() || "?";
-  return <span className={`${size} grid place-items-center rounded-full bg-accent text-sm font-medium text-white`}>{initial}</span>;
+  return <span className={`${size} grid place-items-center rounded-full bg-accent text-sm font-medium text-on-accent`}>{initial}</span>;
 }
 
 function Avatar({ image, name, onSignOut }: { image?: string; name?: string; onSignOut: () => Promise<void> }) {

@@ -126,7 +126,7 @@ export function NewTaskSheet({
 
   return (
     <div className="fixed inset-0 z-40 flex items-end justify-center md:items-start md:pt-[12vh]" role="dialog" aria-modal="true" aria-labelledby="new-task-title">
-      <button type="button" aria-label="Fermer" onClick={onClose} className="animate-fade absolute inset-0 bg-ink/40" />
+      <button type="button" aria-label="Fermer" onClick={onClose} className="animate-fade absolute inset-0 bg-scrim" />
       <form
         onSubmit={submit}
         className="animate-sheet relative flex max-h-[92dvh] w-full flex-col bg-canvas md:max-h-[76vh] md:max-w-xl md:border md:border-line"
@@ -237,7 +237,7 @@ export function NewTaskSheet({
           <button
             type="submit"
             disabled={!title || busy}
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-accent text-[15px] font-medium text-white transition-opacity duration-200 ease-brand hover:opacity-90 disabled:opacity-40"
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-accent text-[15px] font-medium text-on-accent transition-opacity duration-200 ease-brand hover:opacity-90 disabled:opacity-40"
           >
             <ArrowUp className="size-4" aria-hidden />
             {busy ? "Ajout…" : "Ajouter la tâche"}
@@ -268,7 +268,7 @@ function Chip({ on, onClick, hidden, children }: { on: boolean; onClick: () => v
       onClick={onClick}
       aria-pressed={on}
       className={`h-9 rounded-full border px-4 text-[13px] whitespace-nowrap transition-colors duration-150 ease-brand ${
-        on ? "border-accent bg-accent text-white" : "border-line text-ink-2 hover:border-ink hover:text-ink"
+        on ? "border-accent bg-accent text-on-accent" : "border-line text-ink-2 hover:border-ink hover:text-ink"
       }`}
     >
       {children}

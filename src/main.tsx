@@ -8,6 +8,9 @@ import { registerServiceWorker } from "./lib/push";
 import { hideSplash } from "./lib/splash";
 import { loadOffline, startSync } from "./lib/offline";
 import "./index.css";
+import { applyTheme } from "./lib/theme";
+
+applyTheme();
 
 const url = import.meta.env.VITE_CONVEX_URL as string | undefined;
 

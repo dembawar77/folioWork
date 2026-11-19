@@ -135,7 +135,7 @@ export function TaskRow({
         >
           <span
             className={`grid size-5 place-items-center rounded-full border transition-colors duration-150 ${
-              task.completed ? "border-accent bg-accent text-white" : task.priority === "urgent" ? "border-[1.5px] border-ink" : "border-ink-3 hover:border-accent"
+              task.completed ? "border-accent bg-accent text-on-accent" : task.priority === "urgent" ? "border-[1.5px] border-ink" : "border-ink-3 hover:border-accent"
             }`}
           >
             {task.completed && (
@@ -381,7 +381,7 @@ function RequestSection({ task }: { task: Task }) {
           href={reply}
           target="_blank"
           rel="noreferrer"
-          className="mt-3 inline-flex h-10 items-center gap-2 rounded-full bg-accent px-5 text-sm font-medium text-white transition-opacity duration-200 ease-brand hover:opacity-90"
+          className="mt-3 inline-flex h-10 items-center gap-2 rounded-full bg-accent px-5 text-sm font-medium text-on-accent transition-opacity duration-200 ease-brand hover:opacity-90"
         >
           <MessageCircle className="size-4" aria-hidden /> Répondre sur WhatsApp
         </a>

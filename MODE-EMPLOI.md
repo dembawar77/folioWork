@@ -140,7 +140,11 @@ Le nombre de cases cochées s'affiche dans la liste (ex. `2/5`).
 
 **Résumé du matin** : **Alertes → Résumé quotidien**, choisissez l'heure. Vous recevez chaque matin les tâches du jour et celles en retard.
 
-## 5 bis. Exporter mes données
+## 5 bis. Apparence (mode sombre)
+
+**Alertes → Apparence** : **Automatique** (par défaut, suit le réglage du téléphone ou de l'ordinateur, y compris le passage en sombre programmé le soir), **Clair** ou **Sombre**. Le choix est propre à chaque appareil.
+
+## 5 ter. Exporter mes données
 
 **Alertes → Mes données → Exporter mes données**, puis :
 

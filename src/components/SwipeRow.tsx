@@ -84,7 +84,7 @@ export function SwipeRow({
   return (
     <div className="relative overflow-hidden">
       {dx !== 0 && (
-        <div aria-hidden className={`absolute inset-0 flex items-center px-5 text-sm font-medium text-white ${dx > 0 ? "justify-start bg-accent" : "justify-end bg-soon"}`}>
+        <div aria-hidden className={`absolute inset-0 flex items-center px-5 text-sm font-medium ${dx > 0 ? "justify-start bg-accent text-on-accent" : "justify-end bg-soon text-on-soon"}`}>
           {dx > 0 ? (
             <span className={`inline-flex items-center gap-2 transition-transform duration-150 ${armedRight ? "scale-110" : ""}`}>
               <Check className="size-5" /> Terminer
