@@ -41,6 +41,12 @@ export function Workspace() {
   const prefs = useQuery(api.preferences.get);
   const { signOut } = useAuthActions();
   const online = useOnline();
+  // Rafraîchit chaque minute les états qui dépendent de l'heure (en retard, « Dans 45 min »).
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick((n) => n + 1), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   const initial = useMemo(readUrl, []);
   const [view, setView] = useState<View>(initial.view ?? (initial.task ? "all" : "today"));
@@ -113,9 +119,11 @@ export function Workspace() {
     setTimeout(() => capture.current?.focus(), 0);
   }, []);
 
-  const c = useMemo(() => counts(tasks ?? []), [tasks]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const c = useMemo(() => counts(tasks ?? []), [tasks, tick]);
   const streams = useMemo(() => workstreamsOf(tasks ?? []), [tasks]);
-  const visible = useMemo(() => (tasks ? filterTasks(tasks, view, { workstream, search }) : []), [tasks, view, workstream, search]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const visible = useMemo(() => (tasks ? filterTasks(tasks, view, { workstream, search }) : []), [tasks, view, workstream, search, tick]);
   const streamCounts = useMemo(() => {
     const m = new Map<string, number>();
     for (const t of tasks ?? []) if (!t.completed && t.workstream) m.set(t.workstream, (m.get(t.workstream) ?? 0) + 1);

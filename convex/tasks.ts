@@ -2,11 +2,12 @@ import { ConvexError, v } from "convex/values";
 import { internalMutation, internalQuery, mutation, query, type MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
-import { vPriority } from "./schema";
+import { vPriority, vRecurrence } from "./schema";
 import { requireUser } from "./users";
 import { getPrefs } from "./preferences";
 import { parseQuickTask } from "./lib/parse";
 import { localDayBounds } from "./lib/time";
+import { firstDue, nextDue, withAnchor, type Recurrence } from "./lib/recurrence";
 
 const MAX_TITLE = 300;
 const MAX_NOTE = 100_000;
@@ -56,12 +57,26 @@ export async function syncReminder(ctx: MutationCtx, taskId: Id<"tasks">) {
 async function insertTask(
   ctx: MutationCtx,
   userId: Id<"users">,
-  input: { title: string; priority: Doc<"tasks">["priority"]; workstream?: string; dueAt?: number; remindAt?: number | null },
+  input: {
+    title: string;
+    priority: Doc<"tasks">["priority"];
+    workstream?: string;
+    dueAt?: number;
+    remindAt?: number | null;
+    recurrence?: Recurrence;
+  },
 ) {
+  const prefs = await getPrefs(ctx, userId);
+  let dueAt = input.dueAt;
+  let recurrence: Recurrence | undefined;
+  if (input.recurrence) {
+    checkRecurrence(input.recurrence);
+    dueAt ??= firstDue(input.recurrence, prefs.timezone, Date.now());
+    recurrence = withAnchor(input.recurrence, dueAt, prefs.timezone);
+  }
   let remindAt = input.remindAt ?? undefined;
-  if (input.remindAt === undefined && input.dueAt !== undefined) {
-    const prefs = await getPrefs(ctx, userId);
-    remindAt = input.dueAt - prefs.defaultReminderOffsetMinutes * 60_000;
+  if (input.remindAt === undefined && dueAt !== undefined) {
+    remindAt = dueAt - prefs.defaultReminderOffsetMinutes * 60_000;
   }
   const id = await ctx.db.insert("tasks", {
     userId,
@@ -69,8 +84,9 @@ async function insertTask(
     completed: false,
     priority: input.priority,
     workstream: cleanWorkstream(input.workstream),
-    dueAt: input.dueAt,
+    dueAt,
     remindAt,
+    recurrence,
     updatedAt: Date.now(),
   });
   await syncReminder(ctx, id);
@@ -92,7 +108,7 @@ export const list = query({
       .withIndex("by_user_completed", (q) => q.eq("userId", userId).eq("completed", true))
       .order("desc")
       .take(300);
-    return [...open, ...done].map(({ reminderJobId: _j, actionToken: _t, ...rest }) => rest);
+    return [...open, ...done].map(({ reminderJobId: _j, actionToken: _t, nextTaskId: _n, spawnedAt: _s, ...rest }) => rest);
   },
 });
 
@@ -106,6 +122,7 @@ export const create = mutation({
     dueAt: v.optional(v.number()),
     /** undefined : délai par défaut ; null : pas de rappel. */
     remindAt: v.optional(v.union(v.number(), v.null())),
+    recurrence: v.optional(vRecurrence),
   },
   handler: async (ctx, args) => {
     const userId = await requireUser(ctx);
@@ -121,16 +138,33 @@ export const update = mutation({
     workstream: v.optional(v.union(v.string(), v.null())),
     dueAt: v.optional(v.union(v.number(), v.null())),
     remindAt: v.optional(v.union(v.number(), v.null())),
+    /** null : ne plus répéter. */
+    recurrence: v.optional(v.union(vRecurrence, v.null())),
   },
   handler: async (ctx, { id, ...args }) => {
     const userId = await requireUser(ctx);
-    await ownTask(ctx, userId, id);
+    const task = await ownTask(ctx, userId, id);
     const patch: Partial<Doc<"tasks">> = { updatedAt: Date.now() };
     if (args.title !== undefined) patch.title = cleanTitle(args.title);
     if (args.priority !== undefined) patch.priority = args.priority;
     if (args.workstream !== undefined) patch.workstream = cleanWorkstream(args.workstream);
     if (args.dueAt !== undefined) patch.dueAt = args.dueAt ?? undefined;
     if (args.remindAt !== undefined) patch.remindAt = args.remindAt ?? undefined;
+    const dueAt = args.dueAt !== undefined ? (args.dueAt ?? undefined) : task.dueAt;
+    if (args.recurrence !== undefined) {
+      if (args.recurrence === null) patch.recurrence = undefined;
+      else {
+        checkRecurrence(args.recurrence);
+        if (dueAt === undefined) throw new ConvexError("Ajoutez d'abord une échéance pour répéter la tâche");
+        const prefs = await getPrefs(ctx, userId);
+        patch.recurrence = withAnchor(args.recurrence, dueAt, prefs.timezone);
+      }
+    } else if (args.dueAt === null && task.recurrence) {
+      patch.recurrence = undefined; // plus d'échéance : plus de répétition
+    } else if (args.dueAt != null && task.recurrence?.freq === "monthly") {
+      const prefs = await getPrefs(ctx, userId);
+      patch.recurrence = withAnchor(task.recurrence, args.dueAt, prefs.timezone);
+    }
     await ctx.db.patch(id, patch);
     if (args.remindAt !== undefined) await syncReminder(ctx, id);
   },
@@ -152,12 +186,65 @@ export const saveNote = mutation({
   },
 });
 
+function checkRecurrence(r: Recurrence) {
+  if (!Number.isInteger(r.interval) || r.interval < 1 || r.interval > 52) throw new ConvexError("Intervalle de répétition invalide");
+}
+
+/** Copie la note en décochant ses cases : chaque occurrence repart d'une liste vierge. */
+function resetChecklist(note: string | undefined): string | undefined {
+  if (!note) return note;
+  try {
+    const doc = JSON.parse(note);
+    const walk = (n: any) => {
+      if (n?.type === "taskItem" && n.attrs) n.attrs.checked = false;
+      n?.content?.forEach(walk);
+    };
+    walk(doc);
+    return JSON.stringify(doc);
+  } catch {
+    return note;
+  }
+}
+
 async function setCompleted(ctx: MutationCtx, task: Doc<"tasks">, completed: boolean) {
-  await ctx.db.patch(task._id, {
-    completed,
-    completedAt: completed ? Date.now() : undefined,
-    updatedAt: Date.now(),
-  });
+  const now = Date.now();
+  const patch: Partial<Doc<"tasks">> = { completed, completedAt: completed ? now : undefined, updatedAt: now };
+
+  if (completed && task.recurrence && task.dueAt !== undefined && !task.nextTaskId) {
+    // Occurrence suivante, avec le même délai de rappel et une note aux cases décochées.
+    const prefs = await getPrefs(ctx, task.userId);
+    const dueAt = nextDue(task.dueAt, task.recurrence, prefs.timezone, now);
+    const nextId = await ctx.db.insert("tasks", {
+      userId: task.userId,
+      title: task.title,
+      completed: false,
+      priority: task.priority,
+      workstream: task.workstream,
+      dueAt,
+      remindAt: task.remindAt !== undefined ? dueAt - (task.dueAt - task.remindAt) : undefined,
+      recurrence: task.recurrence,
+      note: resetChecklist(task.note),
+      noteText: task.noteText,
+      checklistTotal: task.checklistTotal,
+      checklistDone: task.checklistTotal ? 0 : undefined,
+      spawnedAt: now,
+      updatedAt: now,
+    });
+    await syncReminder(ctx, nextId);
+    patch.nextTaskId = nextId;
+  }
+
+  if (!completed && task.nextTaskId) {
+    // Tâche rouverte par erreur : on retire l'occurrence suivante si elle n'a pas été touchée.
+    const next = await ctx.db.get(task.nextTaskId);
+    if (next && !next.completed && next.spawnedAt !== undefined && next.updatedAt === next.spawnedAt) {
+      await cancelJob(ctx, next.reminderJobId);
+      await ctx.db.delete(next._id);
+    }
+    patch.nextTaskId = undefined;
+  }
+
+  await ctx.db.patch(task._id, patch);
   await syncReminder(ctx, task._id);
 }
 
@@ -246,6 +333,7 @@ export const createFromText = internalMutation({
       priority: parsed.priority,
       workstream: parsed.workstream,
       dueAt: parsed.dueAt,
+      recurrence: parsed.recurrence,
     });
     return { id, ...parsed, timezone: prefs.timezone };
   },

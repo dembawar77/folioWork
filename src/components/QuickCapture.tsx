@@ -6,6 +6,7 @@ import { errorMessage } from "../lib/errors";
 import { parseQuickTask } from "../../convex/lib/parse";
 import { formatDueLong, userTimeZone } from "../lib/dates";
 import { PRIORITY_LABEL } from "../lib/tasks";
+import { recurrenceLabel } from "../../convex/lib/recurrence";
 
 export type QuickCaptureHandle = { focus: () => void; prefill: (text: string) => void };
 
@@ -49,6 +50,7 @@ export const QuickCapture = forwardRef<QuickCaptureHandle, { defaultWorkstream?:
           dueAt: parsed.dueAt,
           priority: parsed.priority,
           workstream: parsed.workstream ?? defaultWorkstream ?? undefined,
+          recurrence: parsed.recurrence,
         });
         setValue("");
         onCreated?.(id);
@@ -62,6 +64,7 @@ export const QuickCapture = forwardRef<QuickCaptureHandle, { defaultWorkstream?:
     const meta = parsed
       ? [
           parsed.dueAt ? formatDueLong(parsed.dueAt) : null,
+          parsed.recurrence ? recurrenceLabel(parsed.recurrence, parsed.dueAt, userTimeZone()) : null,
           parsed.workstream ?? defaultWorkstream ?? null,
           parsed.priority !== "normal" ? PRIORITY_LABEL[parsed.priority] : null,
         ].filter(Boolean)

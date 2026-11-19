@@ -12,6 +12,15 @@ export function formatDueShort(ms: number): string {
   return format(d, isSameYear(d, new Date()) ? "EEE d MMM HH:mm" : "d MMM yyyy HH:mm", { locale: fr });
 }
 
+/** « Dans 45 min », « Dans 1 h 20 » pour une échéance proche. */
+export function formatIn(ms: number, now = Date.now()): string {
+  const min = Math.max(1, Math.round((ms - now) / 60_000));
+  if (min < 60) return `Dans ${min} min`;
+  const h = Math.floor(min / 60);
+  const rest = min % 60;
+  return rest ? `Dans ${h} h ${String(rest).padStart(2, "0")}` : `Dans ${h} h`;
+}
+
 export function formatDueLong(ms: number): string {
   const d = new Date(ms);
   const time = format(d, "HH:mm");

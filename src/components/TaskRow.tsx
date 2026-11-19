@@ -1,11 +1,12 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useMutation } from "convex/react";
-import { ChevronDown, FileText, Trash2, BellOff, Bell } from "lucide-react";
+import { ChevronDown, FileText, Trash2, BellOff, Bell, Repeat } from "lucide-react";
+import { recurrenceLabel } from "../../convex/lib/recurrence";
 import { api } from "../../convex/_generated/api";
 import { errorMessage } from "../lib/errors";
 import type { Id } from "../../convex/_generated/dataModel";
-import { formatDueShort, fromLocalInput, toLocalInput } from "../lib/dates";
-import { PRIORITIES, PRIORITY_LABEL, type Priority, type Task } from "../lib/tasks";
+import { formatDueShort, formatIn, fromLocalInput, toLocalInput, userTimeZone } from "../lib/dates";
+import { PRIORITIES, PRIORITY_LABEL, RECURRENCE_OPTIONS, recurrenceValue, type Priority, type Task } from "../lib/tasks";
 
 // Tiptap est lourd : chargé seulement à l'ouverture d'une note.
 const NoteEditor = lazy(() => import("./NoteEditor").then((m) => ({ default: m.NoteEditor })));
@@ -61,9 +62,16 @@ export function TaskRow({
   }
   if (task.dueAt !== undefined) {
     meta.push(
-      <span key="d" className={`tabular ${overdue ? "font-medium text-alert" : soon ? "text-ink" : ""}`}>
-        {overdue ? "En retard · " : ""}
-        {formatDueShort(task.dueAt)}
+      <span key="d" className={`tabular ${overdue ? "font-medium text-alert" : soon ? "font-medium text-soon" : ""}`}>
+        {overdue ? `En retard · ${formatDueShort(task.dueAt)}` : soon ? formatIn(task.dueAt, now) : formatDueShort(task.dueAt)}
+      </span>,
+    );
+  }
+  if (task.recurrence && !task.completed) {
+    meta.push(
+      <span key="r" className="inline-flex items-center gap-1">
+        <Repeat className="size-3" aria-hidden />
+        {recurrenceLabel(task.recurrence, task.dueAt, userTimeZone())}
       </span>,
     );
   }
@@ -160,7 +168,7 @@ function TaskDetail({ task, workstreams, defaultOffset }: { task: Task; workstre
 
   return (
     <div className="animate-reveal pb-5 pl-8 sm:pl-9">
-      <div className="mt-1 grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-4">
+      <div className="mt-1 grid grid-cols-2 gap-x-4 gap-y-3 text-sm sm:grid-cols-3">
         <Field label="Échéance">
           <input
             type="datetime-local"
@@ -189,6 +197,24 @@ function TaskDetail({ task, workstreams, defaultOffset }: { task: Task; workstre
             {PRIORITIES.map((p) => (
               <option key={p.value} value={p.value}>
                 {p.label}
+              </option>
+            ))}
+          </select>
+        </Field>
+        <Field label="Répéter" icon={Repeat}>
+          <select
+            value={recurrenceValue(task.recurrence)}
+            onChange={(e) => {
+              const opt = RECURRENCE_OPTIONS.find((o) => o.value === e.target.value);
+              if (opt) void run(update({ id, recurrence: opt.rule }));
+            }}
+            disabled={task.dueAt === undefined}
+            title={task.dueAt === undefined ? "Ajoutez d'abord une échéance" : undefined}
+            className="w-full bg-transparent outline-none disabled:text-ink-3"
+          >
+            {RECURRENCE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
               </option>
             ))}
           </select>

@@ -15,6 +15,19 @@ export const PRIORITIES: { value: Priority; label: string }[] = [
 
 export const PRIORITY_LABEL: Record<Priority, string> = { urgent: "Urgent", high: "Haute", normal: "Normale", low: "Basse" };
 
+export type Recurrence = NonNullable<Task["recurrence"]>;
+
+export const RECURRENCE_OPTIONS: { value: string; label: string; rule: Omit<Recurrence, "monthDay"> | null }[] = [
+  { value: "none", label: "Jamais", rule: null },
+  { value: "daily:1", label: "Tous les jours", rule: { freq: "daily", interval: 1 } },
+  { value: "weekdays:1", label: "En semaine (lun–ven)", rule: { freq: "weekdays", interval: 1 } },
+  { value: "weekly:1", label: "Toutes les semaines", rule: { freq: "weekly", interval: 1 } },
+  { value: "weekly:2", label: "Toutes les 2 semaines", rule: { freq: "weekly", interval: 2 } },
+  { value: "monthly:1", label: "Tous les mois", rule: { freq: "monthly", interval: 1 } },
+];
+
+export const recurrenceValue = (r: Recurrence | undefined) => (r ? `${r.freq}:${r.interval}` : "none");
+
 export const DEFAULT_WORKSTREAMS = ["Campagnes", "Créa", "Digital", "Réunions", "Admin"];
 
 export const VIEW_LABEL: Record<View, string> = {

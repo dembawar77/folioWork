@@ -21,6 +21,8 @@
   --color-accent: #1d23e8;
   /* Rouge d'alerte fonctionnel : uniquement retards et erreurs (contraste 5,9:1 sur blanc). */
   --color-alert: #c8102e;
+  /* Ambre : échéance dans moins de 2 h, toujours accompagné du texte « Dans … » (contraste 5:1). */
+  --color-soon: #b45309;
 
   --radius-none: 0;
   --ease-brand: cubic-bezier(0.22, 0.61, 0.36, 1);

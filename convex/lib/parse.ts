@@ -1,5 +1,6 @@
 import * as chrono from "chrono-node";
 import { tzOffsetMinutes } from "./time";
+import { firstDue, type Recurrence } from "./recurrence";
 
 export type Priority = "urgent" | "high" | "normal" | "low";
 
@@ -10,7 +11,35 @@ export type ParsedTask = {
   hasTime: boolean;
   workstream?: string;
   priority: Priority;
+  recurrence?: Recurrence;
 };
+
+// Bornes de mot compatibles avec les accents (\b ne connaît pas « é »).
+const W = (body: string) => new RegExp(`(?<![\\p{L}\\d])(?:${body})(?![\\p{L}\\d])`, "iu");
+const DAYS = "lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche";
+
+/** Repère une règle de répétition en français et la retire du texte. */
+function extractRecurrence(text: string): { text: string; recurrence?: Recurrence } {
+  const rules: [RegExp, (m: RegExpMatchArray) => { rule: Recurrence; keep?: string }][] = [
+    [W("du lundi au vendredi|en semaine|(?:les |tous les )?jours ouvrés"), () => ({ rule: { freq: "weekdays", interval: 1 } })],
+    [W(`(?:tous les|chaque)\\s+(${DAYS})s?`), (m) => ({ rule: { freq: "weekly", interval: 1 }, keep: m[1].toLowerCase() })],
+    [W(`(?:un|1)\\s+(${DAYS})\\s+sur\\s+(\\d+)`), (m) => ({ rule: { freq: "weekly", interval: Number(m[2]) }, keep: m[1].toLowerCase() })],
+    [W("tous les (\\d+) jours"), (m) => ({ rule: { freq: "daily", interval: Number(m[1]) } })],
+    [W("toutes les (\\d+) semaines"), (m) => ({ rule: { freq: "weekly", interval: Number(m[1]) } })],
+    [W("tous les (\\d+) mois"), (m) => ({ rule: { freq: "monthly", interval: Number(m[1]) } })],
+    [W("tous les jours|chaque jour"), () => ({ rule: { freq: "daily", interval: 1 } })],
+    [W("toutes les semaines|chaque semaine"), () => ({ rule: { freq: "weekly", interval: 1 } })],
+    [W("tous les mois|chaque mois"), () => ({ rule: { freq: "monthly", interval: 1 } })],
+  ];
+  for (const [re, make] of rules) {
+    const m = text.match(re);
+    if (!m) continue;
+    const { rule, keep } = make(m);
+    if (!(rule.interval >= 1 && rule.interval <= 52)) continue;
+    return { text: text.replace(re, keep ?? " "), recurrence: rule };
+  }
+  return { text };
+}
 
 const PRIORITY_WORDS: Record<string, Priority> = {
   urgent: "urgent",
@@ -57,7 +86,8 @@ export function parseQuickTask(input: string, opts: { now: number; timeZone: str
     return " ";
   });
 
-  text = text.replace(/\s+/g, " ").trim();
+  const rec = extractRecurrence(text);
+  text = rec.text.replace(/\s+/g, " ").trim();
 
   let dueAt: number | undefined;
   let hasTime = false;
@@ -77,5 +107,7 @@ export function parseQuickTask(input: string, opts: { now: number; timeZone: str
     text = `${before.replace(DANGLING, "")} ${after}`.replace(/\s+/g, " ").trim();
   }
 
-  return { title: text || input.trim(), dueAt, hasTime, workstream, priority };
+  if (rec.recurrence && dueAt === undefined) dueAt = firstDue(rec.recurrence, opts.timeZone, opts.now);
+
+  return { title: text || input.trim(), dueAt, hasTime, workstream, priority, recurrence: rec.recurrence };
 }

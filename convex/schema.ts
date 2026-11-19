@@ -3,6 +3,13 @@ import { v } from "convex/values";
 
 export const vPriority = v.union(v.literal("urgent"), v.literal("high"), v.literal("normal"), v.literal("low"));
 
+export const vRecurrence = v.object({
+  freq: v.union(v.literal("daily"), v.literal("weekdays"), v.literal("weekly"), v.literal("monthly")),
+  interval: v.number(),
+  /** Jour du mois d'origine (règle mensuelle) : 31 → 28 février → 31 mars. */
+  monthDay: v.optional(v.number()),
+});
+
 export default defineSchema({
   users: defineTable({
     name: v.optional(v.string()),
@@ -32,6 +39,12 @@ export default defineSchema({
     noteText: v.optional(v.string()),
     checklistTotal: v.optional(v.number()),
     checklistDone: v.optional(v.number()),
+    /** Répétition : à la fin d'une occurrence, la suivante est créée automatiquement. */
+    recurrence: v.optional(vRecurrence),
+    /** Occurrence suivante créée quand celle-ci a été terminée. */
+    nextTaskId: v.optional(v.id("tasks")),
+    /** Horodatage de création automatique (pour savoir si l'occurrence a été modifiée depuis). */
+    spawnedAt: v.optional(v.number()),
     updatedAt: v.number(),
   })
     .index("by_user", ["userId"])

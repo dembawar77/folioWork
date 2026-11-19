@@ -17,6 +17,7 @@ FolioWork remplit lui-même l'échéance, la catégorie et la priorité. Un aper
 | `lundi`, `3 décembre` (sans heure) | échéance à **09:00** |
 | `#Créa`, `#campagne_ramadan` | catégorie « Créa », « Campagne ramadan » |
 | `!urgent` · `!haute` · `!basse` | priorité (Normale par défaut) |
+| `tous les jours`, `en semaine`, `chaque lundi`, `toutes les 2 semaines`, `tous les mois` | tâche **récurrente** |
 
 Si une catégorie est sélectionnée à gauche (ou dans les filtres sur mobile), la nouvelle tâche la reçoit automatiquement.
 
@@ -31,7 +32,11 @@ Si une catégorie est sélectionnée à gauche (ou dans les filtres sur mobile),
 
 ⚠️ Une tâche **sans échéance** n'apparaît que dans **Toutes**.
 
-Les couleurs : **rouge** = en retard ou urgent, **orange** = échéance dans moins de 2 h ou priorité haute.
+Les signaux :
+
+- **Rouge** : en retard (« En retard · Hier 16:00 »).
+- **Ambre** : échéance dans moins de 2 h (« Dans 45 min »).
+- **URGENT** / **HAUTE** en capitales : la priorité que vous avez choisie.
 
 ## 3. Ouvrir une tâche
 
@@ -43,6 +48,17 @@ Cliquez sur une tâche pour la déplier. Vous pouvez :
 - **supprimer** la tâche (en bas à droite).
 
 Le **rond** à gauche termine la tâche. Dans **Terminées**, un nouveau clic la rouvre.
+
+## 3 bis. Tâches récurrentes
+
+Pour une tâche qui revient (rapport hebdo, point du lundi, reporting mensuel) :
+
+- à la saisie : `Rapport hebdo chaque lundi 9h #Admin`, `Point équipe tous les jours 10h`, `Reporting Meta Ads tous les mois le 5 décembre` ;
+- ou après coup : ouvrez la tâche → **Répéter**.
+
+Quand vous **terminez** une occurrence, la suivante est créée aussitôt, avec la même catégorie, la même priorité, le même délai de rappel et la même note, **cases décochées**. Une occurrence terminée en retard repart à la prochaine date à venir (pas de rattrapage). Une tâche rouverte par erreur retire l'occurrence suivante si vous n'y avez pas touché.
+
+Le symbole ↻ et le rythme (« Chaque lundi », « Lun–ven ») s'affichent sous le titre. Pour arrêter : **Répéter → Jamais**.
 
 ## 4. Les notes
 
@@ -107,6 +123,5 @@ Pour délier le compte : **Alertes → Telegram → Délier**.
 ## 9. Limites actuelles (v0.1)
 
 - **Hors connexion** : si le réseau coupe un instant, vos modifications partent dès qu'il revient. Mais si vous **fermez l'app** sans réseau, les modifications non envoyées sont perdues, et l'app rouverte hors ligne n'affiche pas vos tâches.
-- **Pas de tâches récurrentes** (rapport hebdo, etc.) pour l'instant.
 - **Un seul utilisateur** : pas encore de partage avec l'équipe.
 - Les dates ne sont reconnues **qu'en français**.

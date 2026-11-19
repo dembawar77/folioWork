@@ -12,6 +12,7 @@ import type * as auth from "../auth.js";
 import type * as http from "../http.js";
 import type * as lib_format from "../lib/format.js";
 import type * as lib_parse from "../lib/parse.js";
+import type * as lib_recurrence from "../lib/recurrence.js";
 import type * as lib_telegram from "../lib/telegram.js";
 import type * as lib_time from "../lib/time.js";
 import type * as notify from "../notify.js";
@@ -32,6 +33,7 @@ declare const fullApi: ApiFromModules<{
   http: typeof http;
   "lib/format": typeof lib_format;
   "lib/parse": typeof lib_parse;
+  "lib/recurrence": typeof lib_recurrence;
   "lib/telegram": typeof lib_telegram;
   "lib/time": typeof lib_time;
   notify: typeof notify;

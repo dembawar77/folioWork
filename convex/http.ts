@@ -3,6 +3,7 @@ import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { sendMessage, tg } from "./lib/telegram";
 import { escapeHtml, formatDue, formatTime, PRIORITY_LABEL } from "./lib/format";
+import { recurrenceLabel } from "./lib/recurrence";
 
 const http = httpRouter();
 
@@ -43,6 +44,7 @@ const HELP = [
   "• Date et heure en français : <i>demain 10h, vendredi, le 25 novembre à 14h30, dans 2 heures</i>",
   "• <code>#Catégorie</code> pour classer",
   "• <code>!urgent</code>, <code>!haute</code> ou <code>!basse</code> pour la priorité",
+  "• Répétition : <i>tous les jours, en semaine, chaque lundi, toutes les 2 semaines, tous les mois</i>",
   "",
   "/aujourdhui : vos tâches du jour",
 ].join("\n");
@@ -135,6 +137,7 @@ http.route({
       const created = await ctx.runMutation(internal.tasks.createFromText, { userId, text });
       const parts = [
         created.dueAt ? `Échéance : ${escapeHtml(formatDue(created.dueAt, created.timezone))}` : "Sans échéance",
+        created.recurrence ? `Répétition : ${recurrenceLabel(created.recurrence, created.dueAt, created.timezone)}` : null,
         created.workstream ? `Catégorie : ${escapeHtml(created.workstream)}` : null,
         created.priority !== "normal" ? `Priorité : ${PRIORITY_LABEL[created.priority]}` : null,
       ].filter(Boolean);
