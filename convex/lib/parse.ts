@@ -12,6 +12,8 @@ export type ParsedTask = {
   workstream?: string;
   priority: Priority;
   recurrence?: Recurrence;
+  /** Personne dont on attend un retour (« @Moussa »). */
+  waitingFor?: string;
 };
 
 // Bornes de mot compatibles avec les accents (\b ne connaît pas « é »).
@@ -86,6 +88,17 @@ export function parseQuickTask(input: string, opts: { now: number; timeZone: str
     return " ";
   });
 
+  let waitingFor: string | undefined;
+  text = text.replace(/\s@([\p{L}\d_.-]{1,40})(?=\s)/gu, (_m, word: string) => {
+    waitingFor = word
+      .replace(/[_.-]+/g, " ")
+      .trim()
+      .split(/\s+/)
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
+    return " ";
+  });
+
   const rec = extractRecurrence(text);
   text = rec.text.replace(/\s+/g, " ").trim();
 
@@ -109,5 +122,5 @@ export function parseQuickTask(input: string, opts: { now: number; timeZone: str
 
   if (rec.recurrence && dueAt === undefined) dueAt = firstDue(rec.recurrence, opts.timeZone, opts.now);
 
-  return { title: text || input.trim(), dueAt, hasTime, workstream, priority, recurrence: rec.recurrence };
+  return { title: text || input.trim(), dueAt, hasTime, workstream, priority, recurrence: rec.recurrence, waitingFor };
 }

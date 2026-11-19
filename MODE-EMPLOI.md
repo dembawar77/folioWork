@@ -18,6 +18,7 @@ FolioWork remplit lui-même l'échéance, la catégorie et la priorité. Un aper
 | `#Créa`, `#campagne_ramadan` | catégorie « Créa », « Campagne ramadan » |
 | `!urgent` · `!haute` · `!basse` | priorité (Normale par défaut) |
 | `tous les jours`, `en semaine`, `chaque lundi`, `toutes les 2 semaines`, `tous les mois` | tâche **récurrente** |
+| `@Moussa`, `@agence_vision` | **en attente** de cette personne, relance tous les 2 jours |
 
 Si une catégorie est sélectionnée à gauche (ou dans les filtres sur mobile), la nouvelle tâche la reçoit automatiquement.
 
@@ -59,6 +60,22 @@ Pour une tâche qui revient (rapport hebdo, point du lundi, reporting mensuel) :
 Quand vous **terminez** une occurrence, la suivante est créée aussitôt, avec la même catégorie, la même priorité, le même délai de rappel et la même note, **cases décochées**. Une occurrence terminée en retard repart à la prochaine date à venir (pas de rattrapage). Une tâche rouverte par erreur retire l'occurrence suivante si vous n'y avez pas touché.
 
 Le symbole ↻ et le rythme (« Chaque lundi », « Lun–ven ») s'affichent sous le titre. Pour arrêter : **Répéter → Jamais**.
+
+## 3 ter. En attente de… et relances WhatsApp
+
+Pour tout ce qui dépend de quelqu'un d'autre (BAT, devis, validation) :
+
+- à la saisie : `BAT affiche Kirène jeudi @Moussa` ;
+- ou dans la tâche : **Mettre en attente de…** → nom, numéro WhatsApp (facultatif, mémorisé ensuite), rythme de relance (1 à 7 jours).
+
+FolioWork vous rappelle **à 9h** quand il est temps de relancer, avec le bouton **Relancer sur WhatsApp** : WhatsApp s'ouvre avec le message déjà rédigé (« Bonjour Moussa, je reviens vers vous au sujet de « BAT affiche Kirène » (prévu jeudi à 10:00). Où en sommes-nous ? Merci. »). Vous pouvez le modifier avant d'envoyer.
+
+- **Reçu** : la personne a répondu, la tâche n'attend plus personne (elle reste ouverte).
+- Sans réponse, la relance revient au même rythme.
+- La vue **En attente** regroupe tout par personne ; « À relancer » s'affiche en ambre.
+- Sur Telegram : boutons **Relancer sur WhatsApp**, **Reçu**, **Dans 2 jours**.
+
+La personne relancée n'a besoin ni de compte ni de l'app.
 
 ## 4. Les notes
 

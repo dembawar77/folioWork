@@ -27,7 +27,7 @@ http.route({
   handler: httpAction(async (ctx, req) => {
     const body = await req.json().catch(() => null);
     const { taskId, token, action } = body ?? {};
-    if (typeof taskId !== "string" || typeof token !== "string" || (action !== "done" && action !== "snooze")) {
+    if (typeof taskId !== "string" || typeof token !== "string" || !["done", "snooze", "nudge", "received", "postpone"].includes(action)) {
       return new Response("Requête invalide", { status: 400, headers: CORS });
     }
     const ok = await ctx.runMutation(internal.tasks.actByToken, { taskId, token, action });
@@ -45,6 +45,7 @@ const HELP = [
   "• <code>#Catégorie</code> pour classer",
   "• <code>!urgent</code>, <code>!haute</code> ou <code>!basse</code> pour la priorité",
   "• Répétition : <i>tous les jours, en semaine, chaque lundi, toutes les 2 semaines, tous les mois</i>",
+  "• <code>@Nom</code> : en attente de cette personne, relance automatique tous les 2 jours",
   "",
   "/aujourdhui : vos tâches du jour",
 ].join("\n");
@@ -67,18 +68,21 @@ http.route({
         const chatId = String(cq.message?.chat?.id ?? cq.from?.id);
         const [kind, taskId] = String(cq.data ?? "").split(":");
         const userId = await ctx.runQuery(internal.telegram.userForChat, { chatId });
+        const ACTIONS = {
+          done: { action: "done", reply: "Terminée" },
+          snz: { action: "snooze", reply: "Rappel dans 15 min" },
+          rcv: { action: "received", reply: "Retour reçu" },
+          pp2: { action: "postpone", reply: "Relance dans 2 jours" },
+        } as const;
+        const def = ACTIONS[kind as keyof typeof ACTIONS];
         let answer = "Action impossible";
-        if (userId && taskId && (kind === "done" || kind === "snz")) {
-          const title = await ctx.runMutation(internal.tasks.actForUser, {
-            userId,
-            taskId,
-            action: kind === "done" ? "done" : "snooze",
-          });
+        if (userId && taskId && def) {
+          const title = await ctx.runMutation(internal.tasks.actForUser, { userId, taskId, action: def.action });
           if (title) {
-            answer = kind === "done" ? "Tâche terminée" : "Rappel dans 15 minutes";
+            answer = def.reply;
             if (cq.message) {
               await tg("editMessageReplyMarkup", { chat_id: chatId, message_id: cq.message.message_id, reply_markup: { inline_keyboard: [] } });
-              await sendMessage(chatId, `${kind === "done" ? "Terminée" : "Rappel dans 15 min"} — ${escapeHtml(title)}`);
+              await sendMessage(chatId, `${def.reply} — ${escapeHtml(title)}`);
             }
           } else answer = "Tâche introuvable";
         }
@@ -139,6 +143,7 @@ http.route({
         created.dueAt ? `Échéance : ${escapeHtml(formatDue(created.dueAt, created.timezone))}` : "Sans échéance",
         created.recurrence ? `Répétition : ${recurrenceLabel(created.recurrence, created.dueAt, created.timezone)}` : null,
         created.workstream ? `Catégorie : ${escapeHtml(created.workstream)}` : null,
+        created.waitingFor ? `En attente de ${escapeHtml(created.waitingFor)} · relance dans 2 jours` : null,
         created.priority !== "normal" ? `Priorité : ${PRIORITY_LABEL[created.priority]}` : null,
       ].filter(Boolean);
       await sendMessage(chatId, `Ajoutée — <b>${escapeHtml(created.title)}</b>\n${parts.join("\n")}`, [

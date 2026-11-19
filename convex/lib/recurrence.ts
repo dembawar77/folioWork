@@ -107,3 +107,9 @@ export function recurrenceLabel(rule: Recurrence, dueAt: number | undefined, tim
       return n === 1 ? "Chaque mois" : `Tous les ${n} mois`;
   }
 }
+
+/** Instant à `hh:mm` heure locale, `days` jours civils après `now` (0 = aujourd'hui). */
+export function dayAt(now: number, days: number, hhmm: string, timeZone: string): number {
+  const [h, min] = hhmm.split(":").map(Number);
+  return fromLocal({ ...addDays(toLocal(now, timeZone), days), h, min }, timeZone);
+}

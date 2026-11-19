@@ -10,6 +10,19 @@ export const vRecurrence = v.object({
   monthDay: v.optional(v.number()),
 });
 
+export const vWaitingFor = v.object({
+  name: v.string(),
+  /** Numéro WhatsApp normalisé (chiffres avec indicatif), facultatif. */
+  phone: v.optional(v.string()),
+  since: v.number(),
+  /** Relancer tous les N jours, à 9h heure locale. */
+  everyDays: v.number(),
+  nextFollowUpAt: v.number(),
+  /** Relances envoyées depuis l'app ou une notification. */
+  nudges: v.number(),
+  lastNudgeAt: v.optional(v.number()),
+});
+
 export default defineSchema({
   users: defineTable({
     name: v.optional(v.string()),
@@ -45,6 +58,9 @@ export default defineSchema({
     nextTaskId: v.optional(v.id("tasks")),
     /** Horodatage de création automatique (pour savoir si l'occurrence a été modifiée depuis). */
     spawnedAt: v.optional(v.number()),
+    /** En attente d'un retour de quelqu'un. */
+    waitingFor: v.optional(vWaitingFor),
+    followUpJobId: v.optional(v.id("_scheduled_functions")),
     updatedAt: v.number(),
   })
     .index("by_user", ["userId"])
@@ -58,6 +74,14 @@ export default defineSchema({
     defaultReminderOffsetMinutes: v.number(),
     summaryJobId: v.optional(v.id("_scheduled_functions")),
   }).index("by_user", ["userId"]),
+
+  /** Carnet de contacts pour les relances (nom → numéro WhatsApp). */
+  contacts: defineTable({
+    userId: v.id("users"),
+    name: v.string(),
+    nameKey: v.string(),
+    phone: v.optional(v.string()),
+  }).index("by_user_name", ["userId", "nameKey"]),
 
   pushSubscriptions: defineTable({
     userId: v.id("users"),

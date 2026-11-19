@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useMutation } from "convex/react";
-import { ChevronDown, FileText, Trash2, BellOff, Bell, Repeat } from "lucide-react";
+import { ChevronDown, FileText, Trash2, BellOff, Bell, Repeat, Hourglass } from "lucide-react";
+import { WaitingSection } from "./WaitingSection";
 import { recurrenceLabel } from "../../convex/lib/recurrence";
 import { api } from "../../convex/_generated/api";
 import { errorMessage } from "../lib/errors";
@@ -72,6 +73,16 @@ export function TaskRow({
       <span key="r" className="inline-flex items-center gap-1">
         <Repeat className="size-3" aria-hidden />
         {recurrenceLabel(task.recurrence, task.dueAt, userTimeZone())}
+      </span>,
+    );
+  }
+  if (task.waitingFor && !task.completed) {
+    const toNudge = task.waitingFor.nextFollowUpAt <= now;
+    const days = Math.floor((now - task.waitingFor.since) / 86_400_000);
+    meta.push(
+      <span key="wf" className={`inline-flex items-center gap-1 ${toNudge ? "font-medium text-soon" : ""}`}>
+        <Hourglass className="size-3" aria-hidden />
+        {toNudge ? `À relancer · ${task.waitingFor.name}` : `Attend ${task.waitingFor.name}${days > 0 ? ` · ${days} j` : ""}`}
       </span>,
     );
   }
@@ -236,6 +247,8 @@ function TaskDetail({ task, workstreams, defaultOffset }: { task: Task; workstre
           </datalist>
         </Field>
       </div>
+
+      <WaitingSection task={task} />
 
       <div className="mt-4 border border-line bg-canvas p-3">
         <Suspense fallback={<div className="h-24" aria-busy />}>

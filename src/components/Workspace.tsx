@@ -12,7 +12,7 @@ import { AlertsPanel } from "./AlertsPanel";
 import { InstallButton } from "./InstallButton";
 import { Wordmark } from "./Wordmark";
 
-const VIEWS: View[] = ["today", "upcoming", "all", "done", "alerts"];
+const VIEWS: View[] = ["today", "upcoming", "all", "waiting", "done", "alerts"];
 
 function readUrl() {
   const p = new URLSearchParams(window.location.search);
@@ -130,7 +130,7 @@ export function Workspace() {
     return m;
   }, [tasks]);
 
-  const navCount: Partial<Record<View, number>> = { today: c.today, upcoming: c.upcoming, all: c.all, done: c.done };
+  const navCount: Partial<Record<View, number>> = { today: c.today, upcoming: c.upcoming, all: c.all, waiting: c.waiting, done: c.done };
 
   return (
     <div className="min-h-dvh bg-canvas">
@@ -140,7 +140,7 @@ export function Workspace() {
           <Wordmark />
         </div>
         <nav className="flex flex-1 items-center gap-1" aria-label="Vues">
-          {(["today", "upcoming", "all", "alerts"] as View[]).map((v) => (
+          {(["today", "upcoming", "all", "waiting", "alerts"] as View[]).map((v) => (
             <button
               key={v}
               onClick={() => setView(v)}
@@ -210,7 +210,7 @@ export function Workspace() {
         {/* ── Rail gauche (ordinateur) ─────────────────────── */}
         <aside className="sticky top-14 hidden h-[calc(100dvh-3.5rem)] w-60 shrink-0 flex-col border-r border-line px-4 py-5 md:flex">
           <RailGroup title="Statut">
-            {(["today", "upcoming", "all", "done"] as View[]).map((v) => (
+            {(["today", "upcoming", "all", "waiting", "done"] as View[]).map((v) => (
               <RailItem key={v} active={view === v} onClick={() => setView(v)} label={VIEW_LABEL[v]} count={navCount[v]} />
             ))}
           </RailGroup>
@@ -240,7 +240,7 @@ export function Workspace() {
             {/* Filtres (mobile) */}
             {view !== "alerts" && (
               <div className="-mx-4 mb-2 flex gap-1.5 overflow-x-auto px-4 pb-2 md:hidden" role="group" aria-label="Filtres">
-                {(["all", "done"] as View[]).map((v) => (
+                {(["waiting", "all", "done"] as View[]).map((v) => (
                   <Chip key={v} active={view === v} onClick={() => setView(view === v ? "today" : v)}>
                     {VIEW_LABEL[v]}
                   </Chip>
@@ -265,15 +265,22 @@ export function Workspace() {
                   <Empty view={view} searching={!!search} onCreate={goCapture} />
                 ) : (
                   <div>
-                    {visible.map((t) => (
-                      <TaskRow
-                        key={t._id}
-                        task={t}
-                        expanded={expanded === t._id}
-                        onToggleExpand={() => setExpanded(expanded === t._id ? null : t._id)}
-                        workstreams={streams}
-                        defaultOffset={prefs?.defaultReminderOffsetMinutes ?? 0}
-                      />
+                    {visible.map((t, i) => (
+                      <div key={t._id}>
+                        {view === "waiting" && t.waitingFor && t.waitingFor.name !== visible[i - 1]?.waitingFor?.name && (
+                          <p className={`eyebrow mb-1 flex gap-2 text-ink ${i === 0 ? "mt-2" : "mt-8"}`}>
+                            {t.waitingFor.name}
+                            <span className="text-ink-2">{visible.filter((x) => x.waitingFor?.name === t.waitingFor!.name).length}</span>
+                          </p>
+                        )}
+                        <TaskRow
+                          task={t}
+                          expanded={expanded === t._id}
+                          onToggleExpand={() => setExpanded(expanded === t._id ? null : t._id)}
+                          workstreams={streams}
+                          defaultOffset={prefs?.defaultReminderOffsetMinutes ?? 0}
+                        />
+                      </div>
                     ))}
                   </div>
                 )}
@@ -312,6 +319,8 @@ function ViewHeader({ view, counts: c, workstream }: { view: View; counts: Retur
         ? `${c.upcoming} planifiée${c.upcoming > 1 ? "s" : ""}`
         : view === "all"
           ? `${c.all} ouverte${c.all > 1 ? "s" : ""}`
+          : view === "waiting"
+            ? `${c.waiting} en attente`
           : view === "done"
             ? `${c.done} terminée${c.done > 1 ? "s" : ""}`
             : "Rappels, résumé du matin, Telegram";
@@ -324,6 +333,7 @@ function ViewHeader({ view, counts: c, workstream }: { view: View; counts: Retur
       <p className="tabular pb-1 text-[13px] text-ink-2">
         {sub}
         {view === "today" && c.overdue > 0 && <span className="font-medium text-alert"> · {c.overdue} en retard</span>}
+        {view === "waiting" && c.toNudge > 0 && <span className="font-medium text-soon"> · {c.toNudge} à relancer</span>}
       </p>
     </div>
   );
@@ -337,6 +347,8 @@ function Empty({ view, searching, onCreate }: { view: View; searching: boolean; 
       ? "Rien de prévu aujourd'hui."
       : view === "upcoming"
         ? "Aucune tâche planifiée pour les prochains jours."
+        : view === "waiting"
+          ? "Personne ne vous doit de retour. Ajoutez @Nom à une tâche pour suivre une relance."
         : view === "done"
           ? "Les tâches terminées apparaîtront ici."
           : "Aucune tâche ouverte.";

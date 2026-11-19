@@ -8,15 +8,19 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { sendMessage, reminderButtons } from "./lib/telegram";
 import { escapeHtml, formatDue, formatTime, PRIORITY_LABEL } from "./lib/format";
+import { followUpMessage, whatsappLink } from "./lib/whatsapp";
 
 type PushPayload = {
   title: string;
   body: string;
   tag?: string;
   url: string;
+  /** « reminder » : Terminé / +15 min ; « followup » : Relancer sur WhatsApp / Reçu. */
+  kind?: "reminder" | "followup";
   taskId?: string;
   actionToken?: string;
   actionUrl?: string;
+  whatsappUrl?: string;
 };
 
 type Targets = {
@@ -89,6 +93,7 @@ export const fireReminder = internalAction({
         body: [`Échéance ${when}`, meta, preview].filter(Boolean).join("\n"),
         tag: `task-${taskId}`,
         url: `/?task=${taskId}`,
+        kind: "reminder",
         taskId,
         actionToken,
         actionUrl: `${process.env.CONVEX_SITE_URL}/push/action`,
@@ -98,6 +103,48 @@ export const fireReminder = internalAction({
           preview ? `\n\n<i>${escapeHtml(preview)}</i>` : ""
         }`,
         buttons: reminderButtons(taskId),
+      },
+    );
+  },
+});
+
+export const fireFollowUp = internalAction({
+  args: { taskId: v.id("tasks") },
+  handler: async (ctx, { taskId }) => {
+    const task = await ctx.runQuery(internal.tasks.getInternal, { taskId });
+    if (!task || task.completed || !task.waitingFor) return;
+    const prefs = await ctx.runQuery(internal.preferences.internalGet, { userId: task.userId });
+    const actionToken = randomBytes(18).toString("base64url");
+    await ctx.runMutation(internal.tasks.followUpSent, { taskId, actionToken });
+
+    const w = task.waitingFor;
+    const days = Math.max(1, Math.round((Date.now() - w.since) / 86_400_000));
+    const since = `En attente depuis ${days} jour${days > 1 ? "s" : ""}${w.nudges ? ` · ${w.nudges} relance${w.nudges > 1 ? "s" : ""}` : ""}`;
+    const wa = whatsappLink(w.phone, followUpMessage(w.name, task.title, task.dueAt, prefs.timezone));
+
+    await deliver(
+      ctx,
+      task.userId,
+      {
+        title: `Relancer ${w.name}`,
+        body: `${task.title}\n${since}`,
+        tag: `followup-${taskId}`,
+        url: `/?task=${taskId}`,
+        kind: "followup",
+        taskId,
+        actionToken,
+        actionUrl: `${process.env.CONVEX_SITE_URL}/push/action`,
+        whatsappUrl: wa,
+      },
+      {
+        html: `<b>Relancer ${escapeHtml(w.name)}</b>\n${escapeHtml(task.title)}\n<i>${escapeHtml(since)}</i>`,
+        buttons: [
+          [{ text: "Relancer sur WhatsApp", url: wa }],
+          [
+            { text: "Reçu", callback_data: `rcv:${taskId}` },
+            { text: "Dans 2 jours", callback_data: `pp2:${taskId}` },
+          ],
+        ],
       },
     );
   },

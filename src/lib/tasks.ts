@@ -4,7 +4,7 @@ import { endOfToday } from "./dates";
 
 export type Task = FunctionReturnType<typeof api.tasks.list>[number];
 export type Priority = Task["priority"];
-export type View = "today" | "upcoming" | "all" | "done" | "alerts";
+export type View = "today" | "upcoming" | "all" | "waiting" | "done" | "alerts";
 
 export const PRIORITIES: { value: Priority; label: string }[] = [
   { value: "urgent", label: "Urgent" },
@@ -34,6 +34,7 @@ export const VIEW_LABEL: Record<View, string> = {
   today: "Aujourd'hui",
   upcoming: "À venir",
   all: "Toutes",
+  waiting: "En attente",
   done: "Terminées",
   alerts: "Alertes",
 };
@@ -53,13 +54,20 @@ export function filterTasks(tasks: Task[], view: View, opts: { workstream: strin
         return !t.completed && t.dueAt !== undefined && t.dueAt >= end;
       case "all":
         return !t.completed;
+      case "waiting":
+        return !t.completed && !!t.waitingFor;
       case "done":
         return t.completed;
       default:
         return false;
     }
   });
-  if (view === "done") {
+  if (view === "waiting") {
+    list = list.sort(
+      (a, b) =>
+        a.waitingFor!.name.localeCompare(b.waitingFor!.name, "fr") || a.waitingFor!.nextFollowUpAt - b.waitingFor!.nextFollowUpAt,
+    );
+  } else if (view === "done") {
     list = list.sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0));
   } else if (view === "all") {
     list = list.sort(
@@ -80,7 +88,9 @@ export function counts(tasks: Task[]) {
     upcoming = 0,
     all = 0,
     done = 0,
-    overdue = 0;
+    overdue = 0,
+    waiting = 0,
+    toNudge = 0;
   const now = Date.now();
   for (const t of tasks) {
     if (t.completed) {
@@ -88,13 +98,17 @@ export function counts(tasks: Task[]) {
       continue;
     }
     all++;
+    if (t.waitingFor) {
+      waiting++;
+      if (t.waitingFor.nextFollowUpAt <= now) toNudge++;
+    }
     if (t.dueAt !== undefined) {
       if (t.dueAt < end) today++;
       else upcoming++;
       if (t.dueAt < now) overdue++;
     }
   }
-  return { today, upcoming, all, done, overdue };
+  return { today, upcoming, all, done, overdue, waiting, toNudge };
 }
 
 export function workstreamsOf(tasks: Task[]): string[] {

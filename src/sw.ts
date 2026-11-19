@@ -33,9 +33,11 @@ type Payload = {
   body: string;
   tag?: string;
   url: string;
+  kind?: "reminder" | "followup";
   taskId?: string;
   actionToken?: string;
   actionUrl?: string;
+  whatsappUrl?: string;
 };
 
 self.addEventListener("push", (event) => {
@@ -55,12 +57,17 @@ self.addEventListener("push", (event) => {
       data,
       requireInteraction: canAct,
       // @ts-expect-error : `actions` est géré par Chrome/Edge/Android, ignoré ailleurs.
-      actions: canAct
-        ? [
-            { action: "done", title: "Terminé" },
-            { action: "snooze", title: "+15 min" },
-          ]
-        : [],
+      actions: !canAct
+        ? []
+        : data.kind === "followup"
+          ? [
+              { action: "nudge", title: "Relancer sur WhatsApp" },
+              { action: "received", title: "Reçu" },
+            ]
+          : [
+              { action: "done", title: "Terminé" },
+              { action: "snooze", title: "+15 min" },
+            ],
     }),
   );
 });
@@ -69,14 +76,20 @@ self.addEventListener("notificationclick", (event) => {
   const data = (event.notification.data ?? {}) as Payload;
   event.notification.close();
 
-  if ((event.action === "done" || event.action === "snooze") && data.actionUrl) {
-    event.waitUntil(
-      fetch(data.actionUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ taskId: data.taskId, token: data.actionToken, action: event.action }),
-      }).catch(() => undefined),
-    );
+  const report = (action: string) =>
+    fetch(data.actionUrl!, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ taskId: data.taskId, token: data.actionToken, action }),
+    }).catch(() => undefined);
+
+  if (event.action === "nudge" && data.whatsappUrl) {
+    // Ouvre WhatsApp avec le message prêt, et compte la relance.
+    event.waitUntil(Promise.all([self.clients.openWindow(data.whatsappUrl), data.actionUrl ? report("nudge") : undefined]));
+    return;
+  }
+  if (["done", "snooze", "received"].includes(event.action) && data.actionUrl) {
+    event.waitUntil(report(event.action));
     return;
   }
 

@@ -7,7 +7,8 @@ import { requireUser } from "./users";
 import { getPrefs } from "./preferences";
 import { parseQuickTask } from "./lib/parse";
 import { localDayBounds } from "./lib/time";
-import { firstDue, nextDue, withAnchor, type Recurrence } from "./lib/recurrence";
+import { dayAt, firstDue, nextDue, withAnchor, type Recurrence } from "./lib/recurrence";
+import { normalizePhone } from "./lib/whatsapp";
 
 const MAX_TITLE = 300;
 const MAX_NOTE = 100_000;
@@ -64,6 +65,7 @@ async function insertTask(
     dueAt?: number;
     remindAt?: number | null;
     recurrence?: Recurrence;
+    waitingFor?: string;
   },
 ) {
   const prefs = await getPrefs(ctx, userId);
@@ -90,8 +92,148 @@ async function insertTask(
     updatedAt: Date.now(),
   });
   await syncReminder(ctx, id);
+  if (input.waitingFor) await startWaiting(ctx, userId, id, { name: input.waitingFor, everyDays: DEFAULT_FOLLOW_UP_DAYS });
   return id;
 }
+
+// ─── En attente de… / relances ──────────────────────────────────────────────
+
+const DEFAULT_FOLLOW_UP_DAYS = 2;
+const FOLLOW_UP_TIME = "09:00";
+const nameKey = (name: string) => name.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+async function upsertContact(ctx: MutationCtx, userId: Id<"users">, name: string, phone: string | undefined) {
+  const existing = await ctx.db
+    .query("contacts")
+    .withIndex("by_user_name", (q) => q.eq("userId", userId).eq("nameKey", nameKey(name)))
+    .unique();
+  if (existing) {
+    if (phone && phone !== existing.phone) await ctx.db.patch(existing._id, { phone });
+    // Le nom déjà connu fait foi (« moussa » → « Moussa »).
+    return { name: existing.name, phone: phone ?? existing.phone };
+  }
+  await ctx.db.insert("contacts", { userId, name, nameKey: nameKey(name), phone });
+  return { name, phone };
+}
+
+/** Programme la prochaine relance (annule la précédente). */
+export async function scheduleFollowUp(ctx: MutationCtx, taskId: Id<"tasks">, at: number | null) {
+  const task = await ctx.db.get(taskId);
+  if (!task) return;
+  await cancelJob(ctx, task.followUpJobId);
+  let followUpJobId: Id<"_scheduled_functions"> | undefined;
+  if (at !== null && task.waitingFor && !task.completed) {
+    followUpJobId = await ctx.scheduler.runAt(Math.max(at, Date.now()), internal.notify.fireFollowUp, { taskId });
+    await ctx.db.patch(taskId, { waitingFor: { ...task.waitingFor, nextFollowUpAt: at } });
+  }
+  await ctx.db.patch(taskId, { followUpJobId });
+}
+
+async function startWaiting(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  taskId: Id<"tasks">,
+  input: { name: string; phone?: string; everyDays: number },
+) {
+  const typedName = input.name.trim().slice(0, 60);
+  if (!typedName) throw new ConvexError("Indiquez le nom de la personne");
+  if (![1, 2, 3, 5, 7].includes(input.everyDays)) throw new ConvexError("Délai de relance invalide");
+  const typed = input.phone?.trim() ? normalizePhone(input.phone) : undefined;
+  if (input.phone?.trim() && !typed) throw new ConvexError("Numéro WhatsApp invalide");
+  const { name, phone } = await upsertContact(ctx, userId, typedName, typed);
+  const task = await ctx.db.get(taskId);
+  if (!task) return;
+  const prefs = await getPrefs(ctx, userId);
+  const now = Date.now();
+  const at = dayAt(now, input.everyDays, FOLLOW_UP_TIME, prefs.timezone);
+  await ctx.db.patch(taskId, {
+    waitingFor: {
+      name,
+      phone,
+      since: task.waitingFor?.since ?? now,
+      everyDays: input.everyDays,
+      nextFollowUpAt: at,
+      nudges: task.waitingFor?.nudges ?? 0,
+      lastNudgeAt: task.waitingFor?.lastNudgeAt,
+    },
+    updatedAt: now,
+  });
+  await scheduleFollowUp(ctx, taskId, at);
+}
+
+/** La relance vient d'être envoyée : on la compte et on reprogramme la suivante. */
+async function recordNudge(ctx: MutationCtx, task: Doc<"tasks">) {
+  if (!task.waitingFor) return;
+  const prefs = await getPrefs(ctx, task.userId);
+  const now = Date.now();
+  await ctx.db.patch(task._id, {
+    waitingFor: { ...task.waitingFor, nudges: task.waitingFor.nudges + 1, lastNudgeAt: now },
+    updatedAt: now,
+  });
+  await scheduleFollowUp(ctx, task._id, dayAt(now, task.waitingFor.everyDays, FOLLOW_UP_TIME, prefs.timezone));
+}
+
+/** Retour reçu : la tâche n'attend plus personne. */
+async function stopWaiting(ctx: MutationCtx, task: Doc<"tasks">) {
+  await cancelJob(ctx, task.followUpJobId);
+  await ctx.db.patch(task._id, { waitingFor: undefined, followUpJobId: undefined, updatedAt: Date.now() });
+}
+
+async function postponeFollowUp(ctx: MutationCtx, task: Doc<"tasks">, days: number) {
+  if (!task.waitingFor) return;
+  const prefs = await getPrefs(ctx, task.userId);
+  await scheduleFollowUp(ctx, task._id, dayAt(Date.now(), days, FOLLOW_UP_TIME, prefs.timezone));
+}
+
+export const setWaiting = mutation({
+  args: { id: v.id("tasks"), name: v.string(), phone: v.optional(v.string()), everyDays: v.number() },
+  handler: async (ctx, { id, ...input }) => {
+    const userId = await requireUser(ctx);
+    const task = await ownTask(ctx, userId, id);
+    if (task.completed) throw new ConvexError("La tâche est terminée");
+    await startWaiting(ctx, userId, id, input);
+  },
+});
+
+export const received = mutation({
+  args: { id: v.id("tasks") },
+  handler: async (ctx, { id }) => {
+    const userId = await requireUser(ctx);
+    await stopWaiting(ctx, await ownTask(ctx, userId, id));
+  },
+});
+
+export const nudged = mutation({
+  args: { id: v.id("tasks") },
+  handler: async (ctx, { id }) => {
+    const userId = await requireUser(ctx);
+    await recordNudge(ctx, await ownTask(ctx, userId, id));
+  },
+});
+
+export const contacts = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await requireUser(ctx);
+    const list = await ctx.db
+      .query("contacts")
+      .withIndex("by_user_name", (q) => q.eq("userId", userId))
+      .collect();
+    return list.map((c) => ({ name: c.name, phone: c.phone }));
+  },
+});
+
+export const followUpSent = internalMutation({
+  args: { taskId: v.id("tasks"), actionToken: v.string() },
+  handler: async (ctx, { taskId, actionToken }) => {
+    const task = await ctx.db.get(taskId);
+    if (!task?.waitingFor || task.completed) return;
+    const prefs = await getPrefs(ctx, task.userId);
+    await ctx.db.patch(taskId, { actionToken });
+    // Sans réponse, on relancera de nouveau au même rythme.
+    await scheduleFollowUp(ctx, taskId, dayAt(Date.now(), task.waitingFor.everyDays, FOLLOW_UP_TIME, prefs.timezone));
+  },
+});
 
 // ─── Lecture ────────────────────────────────────────────────────────────────
 
@@ -108,7 +250,9 @@ export const list = query({
       .withIndex("by_user_completed", (q) => q.eq("userId", userId).eq("completed", true))
       .order("desc")
       .take(300);
-    return [...open, ...done].map(({ reminderJobId: _j, actionToken: _t, nextTaskId: _n, spawnedAt: _s, ...rest }) => rest);
+    return [...open, ...done].map(
+      ({ reminderJobId: _j, actionToken: _t, nextTaskId: _n, spawnedAt: _s, followUpJobId: _f, ...rest }) => rest,
+    );
   },
 });
 
@@ -123,6 +267,7 @@ export const create = mutation({
     /** undefined : délai par défaut ; null : pas de rappel. */
     remindAt: v.optional(v.union(v.number(), v.null())),
     recurrence: v.optional(vRecurrence),
+    waitingFor: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await requireUser(ctx);
@@ -244,8 +389,15 @@ async function setCompleted(ctx: MutationCtx, task: Doc<"tasks">, completed: boo
     patch.nextTaskId = undefined;
   }
 
-  await ctx.db.patch(task._id, patch);
+  if (completed) await cancelJob(ctx, task.followUpJobId);
+
+  await ctx.db.patch(task._id, completed ? { ...patch, followUpJobId: undefined } : patch);
   await syncReminder(ctx, task._id);
+  // Rouverte alors qu'elle attendait quelqu'un : la relance reprend.
+  if (!completed && task.waitingFor) {
+    const prefs = await getPrefs(ctx, task.userId);
+    await scheduleFollowUp(ctx, task._id, dayAt(now, task.waitingFor.everyDays, FOLLOW_UP_TIME, prefs.timezone));
+  }
 }
 
 export const toggle = mutation({
@@ -263,6 +415,7 @@ export const remove = mutation({
     const userId = await requireUser(ctx);
     const task = await ownTask(ctx, userId, id);
     await cancelJob(ctx, task.reminderJobId);
+    await cancelJob(ctx, task.followUpJobId);
     await ctx.db.delete(id);
   },
 });
@@ -297,28 +450,43 @@ export const markReminderSent = internalMutation({
   },
 });
 
-/** Action depuis un bouton de notification (« Terminé », « +15 min »), autorisée par jeton. */
+export const vTaskAction = v.union(
+  v.literal("done"),
+  v.literal("snooze"),
+  v.literal("nudge"),
+  v.literal("received"),
+  v.literal("postpone"),
+);
+type TaskAction = "done" | "snooze" | "nudge" | "received" | "postpone";
+
+async function applyAction(ctx: MutationCtx, task: Doc<"tasks">, action: TaskAction) {
+  if (action === "done") await setCompleted(ctx, task, true);
+  else if (action === "snooze") await snoozeTask(ctx, task, 15);
+  else if (action === "nudge") await recordNudge(ctx, task);
+  else if (action === "received") await stopWaiting(ctx, task);
+  else await postponeFollowUp(ctx, task, 2);
+}
+
+/** Action depuis un bouton de notification, autorisée par jeton. */
 export const actByToken = internalMutation({
-  args: { taskId: v.string(), token: v.string(), action: v.union(v.literal("done"), v.literal("snooze")) },
+  args: { taskId: v.string(), token: v.string(), action: vTaskAction },
   handler: async (ctx, { taskId, token, action }) => {
     const id = ctx.db.normalizeId("tasks", taskId);
     const task = id ? await ctx.db.get(id) : null;
     if (!task || !task.actionToken || task.actionToken !== token) return false;
-    if (action === "done") await setCompleted(ctx, task, true);
-    else await snoozeTask(ctx, task, 15);
+    await applyAction(ctx, task, action);
     return true;
   },
 });
 
 /** Action depuis Telegram : la tâche doit appartenir à l'utilisateur lié à ce chat. */
 export const actForUser = internalMutation({
-  args: { userId: v.id("users"), taskId: v.string(), action: v.union(v.literal("done"), v.literal("snooze")) },
+  args: { userId: v.id("users"), taskId: v.string(), action: vTaskAction },
   handler: async (ctx, { userId, taskId, action }) => {
     const id = ctx.db.normalizeId("tasks", taskId);
     const task = id ? await ctx.db.get(id) : null;
     if (!task || task.userId !== userId) return null;
-    if (action === "done") await setCompleted(ctx, task, true);
-    else await snoozeTask(ctx, task, 15);
+    await applyAction(ctx, task, action);
     return task.title;
   },
 });
@@ -334,6 +502,7 @@ export const createFromText = internalMutation({
       workstream: parsed.workstream,
       dueAt: parsed.dueAt,
       recurrence: parsed.recurrence,
+      waitingFor: parsed.waitingFor,
     });
     return { id, ...parsed, timezone: prefs.timezone };
   },

@@ -15,6 +15,7 @@ import type * as lib_parse from "../lib/parse.js";
 import type * as lib_recurrence from "../lib/recurrence.js";
 import type * as lib_telegram from "../lib/telegram.js";
 import type * as lib_time from "../lib/time.js";
+import type * as lib_whatsapp from "../lib/whatsapp.js";
 import type * as notify from "../notify.js";
 import type * as preferences from "../preferences.js";
 import type * as push from "../push.js";
@@ -36,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   "lib/recurrence": typeof lib_recurrence;
   "lib/telegram": typeof lib_telegram;
   "lib/time": typeof lib_time;
+  "lib/whatsapp": typeof lib_whatsapp;
   notify: typeof notify;
   preferences: typeof preferences;
   push: typeof push;
