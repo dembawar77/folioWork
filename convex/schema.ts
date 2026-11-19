@@ -60,6 +60,16 @@ export default defineSchema({
     spawnedAt: v.optional(v.number()),
     /** En attente d'un retour de quelqu'un. */
     waitingFor: v.optional(vWaitingFor),
+    /** Arrivée par la boîte de dépôt. */
+    request: v.optional(
+      v.object({
+        from: v.string(),
+        service: v.optional(v.string()),
+        phone: v.optional(v.string()),
+        receivedAt: v.number(),
+        seen: v.boolean(),
+      }),
+    ),
     followUpJobId: v.optional(v.id("_scheduled_functions")),
     updatedAt: v.number(),
   })
@@ -82,6 +92,19 @@ export default defineSchema({
     nameKey: v.string(),
     phone: v.optional(v.string()),
   }).index("by_user_name", ["userId", "nameKey"]),
+
+  /** Boîte de dépôt : lien public pour recevoir des demandes. */
+  intakes: defineTable({
+    userId: v.id("users"),
+    slug: v.string(),
+    enabled: v.boolean(),
+    intro: v.optional(v.string()),
+  })
+    .index("by_slug", ["slug"])
+    .index("by_user", ["userId"]),
+
+  /** Journal minimal des envois, pour limiter les abus. */
+  intakeHits: defineTable({ slug: v.string(), at: v.number() }).index("by_slug_at", ["slug", "at"]),
 
   pushSubscriptions: defineTable({
     userId: v.id("users"),

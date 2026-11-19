@@ -10,6 +10,7 @@
 
 import type * as auth from "../auth.js";
 import type * as http from "../http.js";
+import type * as intake from "../intake.js";
 import type * as lib_format from "../lib/format.js";
 import type * as lib_parse from "../lib/parse.js";
 import type * as lib_recurrence from "../lib/recurrence.js";
@@ -32,6 +33,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   http: typeof http;
+  intake: typeof intake;
   "lib/format": typeof lib_format;
   "lib/parse": typeof lib_parse;
   "lib/recurrence": typeof lib_recurrence;

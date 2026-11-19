@@ -6,6 +6,7 @@ import { errorMessage } from "../lib/errors";
 import { currentSubscription, isIos, pushSupport, subscribePush } from "../lib/push";
 import { userTimeZone } from "../lib/dates";
 import { InstallButton } from "./InstallButton";
+import { IntakeSection } from "./IntakeSection";
 
 const OFFSETS = [
   { value: 0, label: "À l'heure" },
@@ -20,6 +21,7 @@ export function AlertsPanel() {
       <PushSection />
       <SummarySection />
       <TelegramSection />
+      <IntakeSection />
       <section className="py-6">
         <h2 className="text-lg">Installer l'app</h2>
         <p className="mt-1 max-w-prose text-sm text-ink-2">

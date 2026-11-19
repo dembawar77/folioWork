@@ -51,7 +51,7 @@ export function filterTasks(tasks: Task[], view: View, opts: { workstream: strin
     if (q && !`${t.title} ${t.noteText ?? ""} ${t.workstream ?? ""}`.toLowerCase().includes(q)) return false;
     switch (view) {
       case "today":
-        return !t.completed && t.dueAt !== undefined && t.dueAt < end;
+        return !t.completed && ((t.dueAt !== undefined && t.dueAt < end) || isNewRequest(t));
       case "upcoming":
         return !t.completed && t.dueAt !== undefined && t.dueAt >= end;
       case "all":
@@ -79,10 +79,18 @@ export function filterTasks(tasks: Task[], view: View, opts: { workstream: strin
         b._creationTime - a._creationTime,
     );
   } else {
-    list = list.sort((a, b) => a.dueAt! - b.dueAt! || RANK[a.priority] - RANK[b.priority]);
+    list = list.sort(
+      (a, b) =>
+        Number(isNewRequest(b)) - Number(isNewRequest(a)) ||
+        (a.dueAt ?? Number.MAX_SAFE_INTEGER) - (b.dueAt ?? Number.MAX_SAFE_INTEGER) ||
+        RANK[a.priority] - RANK[b.priority],
+    );
   }
   return list;
 }
+
+/** Demande reçue par la boîte de dépôt et pas encore ouverte. */
+export const isNewRequest = (t: Task) => !t.completed && !!t.request && !t.request.seen;
 
 export function counts(tasks: Task[]) {
   const end = endOfToday();
@@ -93,7 +101,8 @@ export function counts(tasks: Task[]) {
     overdue = 0,
     waiting = 0,
     toNudge = 0,
-    doneToday = 0;
+    doneToday = 0,
+    newRequests = 0;
   const startOfToday = end - 86_400_000;
   const now = Date.now();
   for (const t of tasks) {
@@ -103,6 +112,7 @@ export function counts(tasks: Task[]) {
       continue;
     }
     all++;
+    if (isNewRequest(t)) newRequests++;
     if (t.waitingFor) {
       waiting++;
       if (t.waitingFor.nextFollowUpAt <= now) toNudge++;
@@ -113,7 +123,7 @@ export function counts(tasks: Task[]) {
       if (t.dueAt < now) overdue++;
     }
   }
-  return { today, upcoming, all, done, overdue, waiting, toNudge, doneToday };
+  return { today, upcoming, all, done, overdue, waiting, toNudge, doneToday, newRequests };
 }
 
 export function workstreamsOf(tasks: Task[]): string[] {
@@ -122,10 +132,11 @@ export function workstreamsOf(tasks: Task[]): string[] {
   return [...set];
 }
 
-export type Group = { key: string; label: string; tone?: "alert" };
+export type Group = { key: string; label: string; tone?: "alert" | "accent" };
 
 /** Section d'une tâche dans la liste : retard / aujourd'hui, jour à venir, personne attendue. */
 export function groupOf(t: Task, view: View, now: number): Group | null {
+  if (view === "today" && isNewRequest(t)) return { key: "new", label: "Nouvelles demandes", tone: "accent" };
   if (view === "today" && t.dueAt !== undefined) {
     return t.dueAt < now ? { key: "late", label: "En retard", tone: "alert" } : { key: "today", label: "Aujourd'hui" };
   }

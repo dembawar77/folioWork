@@ -314,7 +314,7 @@ export function Workspace() {
                       return (
                       <div key={t._id}>
                         {showHeader && (
-                          <p className={`eyebrow mb-1 flex gap-2 first-letter:uppercase ${g.tone === "alert" ? "text-alert" : "text-ink"} ${i === 0 ? "mt-3" : "mt-8"}`}>
+                          <p className={`eyebrow mb-1 flex gap-2 first-letter:uppercase ${g.tone === "alert" ? "text-alert" : g.tone === "accent" ? "text-accent" : "text-ink"} ${i === 0 ? "mt-3" : "mt-8"}`}>
                             {g.label}
                             <span className="text-ink-2">{groupCount}</span>
                           </p>
@@ -415,6 +415,12 @@ function ViewHeader({ view, counts: c, workstream }: { view: View; counts: Retur
       </div>
       <p className="tabular pb-1 text-[13px] text-ink-2">
         {sub}
+        {view === "today" && c.newRequests > 0 && (
+          <span className="font-medium text-accent">
+            {" "}
+            · {c.newRequests} demande{c.newRequests > 1 ? "s" : ""}
+          </span>
+        )}
         {view === "today" && c.overdue > 0 && <span className="font-medium text-alert"> · {c.overdue} en retard</span>}
         {view === "waiting" && c.toNudge > 0 && <span className="font-medium text-soon"> · {c.toNudge} à relancer</span>}
       </p>

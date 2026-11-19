@@ -85,6 +85,24 @@ FolioWork vous rappelle **à 9h** quand il est temps de relancer, avec le bouton
 
 La personne relancée n'a besoin ni de compte ni de l'app.
 
+## 3 quater. La boîte de dépôt
+
+Un lien à donner aux autres services pour qu'ils vous soumettent leurs demandes, **sans compte** :
+
+1. **Alertes → Boîte de dépôt** : choisissez l'adresse (ex. `…/demande/aloyse`), un message d'accueil facultatif (« Prévoir 48 h pour un visuel »), puis **Activer**.
+2. **Copier le lien** ou **Partager sur WhatsApp**.
+
+Vos collègues remplissent : la demande en une ligne, les détails, pour quand, « c'est urgent », leur nom, leur service et leur WhatsApp (facultatif).
+
+Chaque demande :
+
+- devient une tâche dans la catégorie **Demandes** (priorité **Haute** si « urgent »), échéance à 9h le jour demandé ;
+- vous est signalée par **notification** et sur **Telegram** ;
+- reste en haut de **Aujourd'hui**, section bleue **Nouvelles demandes**, jusqu'à ce que vous l'ayez ouverte puis refermée ;
+- propose **Répondre sur WhatsApp** avec un accusé de réception prêt à envoyer.
+
+Protection : 8 demandes maximum par 10 minutes et 60 par jour, et un piège à robots. **Désactiver** coupe le lien immédiatement.
+
 ## 4. Les notes
 
 Chaque tâche a sa note : compte rendu, idées, liens, sous-tâches. Elle s'enregistre seule (« Enregistré » en haut à droite).

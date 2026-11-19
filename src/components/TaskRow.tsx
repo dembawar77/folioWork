@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useMutation } from "convex/react";
-import { ChevronDown, FileText, Trash2, BellOff, Bell, Repeat, Hourglass, CalendarClock } from "lucide-react";
+import { ChevronDown, FileText, Trash2, BellOff, Bell, Repeat, Hourglass, CalendarClock, Inbox, MessageCircle } from "lucide-react";
+import { formatPhone, whatsappLink } from "../../convex/lib/whatsapp";
 import { WaitingSection } from "./WaitingSection";
 import { SwipeRow } from "./SwipeRow";
 import { recurrenceLabel } from "../../convex/lib/recurrence";
@@ -50,6 +51,17 @@ export function TaskRow({
     if (list) store.setQuery(api.tasks.list, {}, list.map((t) => (t._id === id ? { ...t, completed: !t.completed, completedAt: Date.now() } : t)));
   });
   const postpone = useMutation(api.tasks.postpone);
+  const markSeen = useMutation(api.tasks.markSeen);
+  // Une nouvelle demande est marquée « vue » quand on la referme (pas à l'ouverture,
+  // sinon elle quitterait la liste pendant qu'on la lit).
+  const unseenRef = useRef(false);
+  unseenRef.current = !!task.request && !task.request.seen;
+  useEffect(() => {
+    if (!expanded) return;
+    return () => {
+      if (unseenRef.current) void markSeen({ id: task._id });
+    };
+  }, [expanded, task._id, markSeen]);
   const complete = () => {
     void toggle({ id: task._id });
     onToggled?.(task, !task.completed);
@@ -87,6 +99,14 @@ export function TaskRow({
       <span key="r" className="inline-flex items-center gap-1">
         <Repeat className="size-3" aria-hidden />
         {recurrenceLabel(task.recurrence, task.dueAt, userTimeZone())}
+      </span>,
+    );
+  }
+  if (task.request && !task.completed) {
+    meta.push(
+      <span key="rq" className={`inline-flex items-center gap-1 ${task.request.seen ? "" : "font-medium text-accent"}`}>
+        <Inbox className="size-3" aria-hidden />
+        {task.request.seen ? `Demande de ${task.request.from}` : `Nouvelle demande · ${task.request.from}`}
       </span>,
     );
   }
@@ -274,6 +294,7 @@ function TaskDetail({
         </Field>
       </div>
 
+      {task.request && <RequestSection task={task} />}
       <WaitingSection task={task} />
 
       <div className="mt-4 border border-line bg-canvas p-3">
@@ -359,5 +380,37 @@ function TitleInput({ task }: { task: Task }) {
       maxLength={300}
       className={`block w-full bg-transparent font-medium outline-none focus:bg-canvas ${task.completed ? "text-ink-3 line-through" : ""}`}
     />
+  );
+}
+
+function RequestSection({ task }: { task: Task }) {
+  const r = task.request!;
+  const reply = r.phone
+    ? whatsappLink(r.phone, `Bonjour ${r.from.split(/\s+/)[0]}, bien reçu votre demande « ${task.title} ». Je reviens vers vous rapidement.`)
+    : null;
+  return (
+    <div className="mt-4 border border-line bg-canvas p-3">
+      <p className="eyebrow mb-2 flex items-center gap-1.5 text-ink-2">
+        <Inbox className="size-3" aria-hidden /> Demande reçue
+      </p>
+      <p className="text-[15px] text-ink">
+        <span className="font-medium">{r.from}</span>
+        {r.service && <span className="text-ink-2"> · {r.service}</span>}
+      </p>
+      <p className="mt-0.5 text-xs text-ink-2">
+        Reçue {new Date(r.receivedAt).toLocaleString("fr-FR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })}
+        {r.phone ? ` · ${formatPhone(r.phone)}` : ""}
+      </p>
+      {reply && (
+        <a
+          href={reply}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-3 inline-flex h-10 items-center gap-2 rounded-full bg-accent px-5 text-sm font-medium text-white transition-opacity duration-200 ease-brand hover:opacity-90"
+        >
+          <MessageCircle className="size-4" aria-hidden /> Répondre sur WhatsApp
+        </a>
+      )}
+    </div>
   );
 }

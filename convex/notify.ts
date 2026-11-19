@@ -150,6 +150,32 @@ export const fireFollowUp = internalAction({
   },
 });
 
+export const fireRequest = internalAction({
+  args: { taskId: v.id("tasks") },
+  handler: async (ctx, { taskId }) => {
+    const task = await ctx.runQuery(internal.tasks.getInternal, { taskId });
+    if (!task?.request) return;
+    const prefs = await ctx.runQuery(internal.preferences.internalGet, { userId: task.userId });
+    const r = task.request;
+    const who = `${r.from}${r.service ? ` (${r.service})` : ""}`;
+    const when = task.dueAt ? `Pour ${formatDue(task.dueAt, prefs.timezone)}` : "Sans date";
+    const reply = r.phone
+      ? whatsappLink(r.phone, `Bonjour ${r.from.split(/\s+/)[0]}, bien reçu votre demande « ${task.title} ». Je reviens vers vous rapidement.`)
+      : null;
+    await deliver(
+      ctx,
+      task.userId,
+      { title: `Nouvelle demande · ${who}`, body: `${task.title}\n${when}`, tag: `request-${taskId}`, url: `/?task=${taskId}` },
+      {
+        html: `<b>Nouvelle demande</b> de ${escapeHtml(who)}\n${escapeHtml(task.title)}\n<i>${escapeHtml(when)}</i>${
+          task.priority === "high" ? "\nMarquée urgente" : ""
+        }`,
+        buttons: reply ? [[{ text: "Répondre sur WhatsApp", url: reply }]] : undefined,
+      },
+    );
+  },
+});
+
 export const fireDailySummary = internalAction({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {

@@ -55,7 +55,7 @@ export async function syncReminder(ctx: MutationCtx, taskId: Id<"tasks">) {
   await ctx.db.patch(taskId, { reminderJobId, reminderSentAt: undefined });
 }
 
-async function insertTask(
+export async function insertTask(
   ctx: MutationCtx,
   userId: Id<"users">,
   input: {
@@ -200,6 +200,15 @@ export const received = mutation({
   handler: async (ctx, { id }) => {
     const userId = await requireUser(ctx);
     await stopWaiting(ctx, await ownTask(ctx, userId, id));
+  },
+});
+
+export const markSeen = mutation({
+  args: { id: v.id("tasks") },
+  handler: async (ctx, { id }) => {
+    const userId = await requireUser(ctx);
+    const task = await ownTask(ctx, userId, id);
+    if (task.request && !task.request.seen) await ctx.db.patch(id, { request: { ...task.request, seen: true } });
   },
 });
 
