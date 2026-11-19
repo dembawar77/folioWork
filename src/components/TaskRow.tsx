@@ -1,7 +1,8 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { useMutation } from "convex/react";
-import { ChevronDown, FileText, Trash2, BellOff, Bell, Repeat, Hourglass } from "lucide-react";
+import { ChevronDown, FileText, Trash2, BellOff, Bell, Repeat, Hourglass, CalendarClock } from "lucide-react";
 import { WaitingSection } from "./WaitingSection";
+import { SwipeRow } from "./SwipeRow";
 import { recurrenceLabel } from "../../convex/lib/recurrence";
 import { api } from "../../convex/_generated/api";
 import { errorMessage } from "../lib/errors";
@@ -34,8 +35,10 @@ export function TaskRow({
   workstreams,
   defaultOffset,
   onToggled,
+  onPostponed,
 }: {
   onToggled?: (task: Task, completed: boolean) => void;
+  onPostponed?: (task: Task, prev: { dueAt: number | null; remindAt: number | null }) => void;
   task: Task;
   expanded: boolean;
   onToggleExpand: () => void;
@@ -46,6 +49,15 @@ export function TaskRow({
     const list = store.getQuery(api.tasks.list, {});
     if (list) store.setQuery(api.tasks.list, {}, list.map((t) => (t._id === id ? { ...t, completed: !t.completed, completedAt: Date.now() } : t)));
   });
+  const postpone = useMutation(api.tasks.postpone);
+  const complete = () => {
+    void toggle({ id: task._id });
+    onToggled?.(task, !task.completed);
+  };
+  const postponeTomorrow = async () => {
+    const prev = await postpone({ id: task._id, days: 1 });
+    onPostponed?.(task, prev);
+  };
   const now = Date.now();
   const overdue = !task.completed && task.dueAt !== undefined && task.dueAt < now;
   const soon = !task.completed && !overdue && task.dueAt !== undefined && task.dueAt - now < 2 * 3_600_000;
@@ -100,16 +112,14 @@ export function TaskRow({
 
   return (
     <div ref={rowRef} id={`task-${task._id}`} className={`border-b border-line ${expanded ? "bg-alabaster" : ""}`}>
+      <SwipeRow disabled={expanded || task.completed} onRight={complete} onLeft={() => void postponeTomorrow()} surface={expanded ? "bg-alabaster" : "bg-canvas"}>
       <div className="flex min-h-14 items-center gap-2">
         <button
           type="button"
           role="checkbox"
           aria-checked={task.completed}
           aria-label={task.completed ? `Rouvrir « ${task.title} »` : `Terminer « ${task.title} »`}
-          onClick={() => {
-            void toggle({ id: task._id });
-            onToggled?.(task, !task.completed);
-          }}
+          onClick={complete}
           className="-ml-2.5 grid size-11 shrink-0 place-items-center"
         >
           <span
@@ -146,12 +156,23 @@ export function TaskRow({
           </button>
         )}
       </div>
-      {expanded && <TaskDetail task={task} workstreams={workstreams} defaultOffset={defaultOffset} />}
+      </SwipeRow>
+      {expanded && <TaskDetail task={task} workstreams={workstreams} defaultOffset={defaultOffset} onPostpone={postponeTomorrow} />}
     </div>
   );
 }
 
-function TaskDetail({ task, workstreams, defaultOffset }: { task: Task; workstreams: string[]; defaultOffset: number }) {
+function TaskDetail({
+  task,
+  workstreams,
+  defaultOffset,
+  onPostpone,
+}: {
+  task: Task;
+  workstreams: string[];
+  defaultOffset: number;
+  onPostpone: () => Promise<void>;
+}) {
   const update = useMutation(api.tasks.update);
   const saveNote = useMutation(api.tasks.saveNote);
   const remove = useMutation(api.tasks.remove);
@@ -266,6 +287,16 @@ function TaskDetail({ task, workstreams, defaultOffset }: { task: Task; workstre
           Créée le {new Date(task._creationTime).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
           {task.reminderSentAt ? " · rappel envoyé" : ""}
         </span>
+        <span className="flex items-center gap-1">
+        {!task.completed && (
+          <button
+            type="button"
+            onClick={() => void run(onPostpone())}
+            className="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-ink-2 hover:bg-hover hover:text-ink"
+          >
+            <CalendarClock className="size-3.5" aria-hidden /> Reporter à demain
+          </button>
+        )}
         <button
           type="button"
           onClick={() => window.confirm(`Supprimer « ${task.title} » ?`) && run(remove({ id }))}
@@ -273,6 +304,7 @@ function TaskDetail({ task, workstreams, defaultOffset }: { task: Task; workstre
         >
           <Trash2 className="size-3.5" aria-hidden /> Supprimer
         </button>
+        </span>
       </div>
       {error && (
         <p role="alert" className="mt-2 text-xs font-medium text-alert">

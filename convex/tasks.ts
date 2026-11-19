@@ -7,7 +7,7 @@ import { requireUser } from "./users";
 import { getPrefs } from "./preferences";
 import { parseQuickTask } from "./lib/parse";
 import { localDayBounds } from "./lib/time";
-import { dayAt, firstDue, nextDue, withAnchor, type Recurrence } from "./lib/recurrence";
+import { dayAt, firstDue, localTime, nextDue, withAnchor, type Recurrence } from "./lib/recurrence";
 import { normalizePhone } from "./lib/whatsapp";
 
 const MAX_TITLE = 300;
@@ -424,6 +424,29 @@ async function snoozeTask(ctx: MutationCtx, task: Doc<"tasks">, minutes: number)
   await ctx.db.patch(task._id, { remindAt: Date.now() + minutes * 60_000, updatedAt: Date.now() });
   await syncReminder(ctx, task._id);
 }
+
+/**
+ * Reporter : la tâche passe au jour J+n (à partir d'aujourd'hui), à la même heure ;
+ * le rappel garde le même écart. Renvoie l'état précédent pour pouvoir annuler.
+ */
+export const postpone = mutation({
+  args: { id: v.id("tasks"), days: v.number() },
+  handler: async (ctx, { id, days }) => {
+    const userId = await requireUser(ctx);
+    const task = await ownTask(ctx, userId, id);
+    const n = Math.min(Math.max(Math.round(days), 1), 30);
+    const prefs = await getPrefs(ctx, userId);
+    const time = task.dueAt !== undefined ? localTime(task.dueAt, prefs.timezone) : "09:00";
+    const dueAt = dayAt(Date.now(), n, time, prefs.timezone);
+    const remindAt =
+      task.remindAt !== undefined && task.dueAt !== undefined
+        ? dueAt - (task.dueAt - task.remindAt)
+        : dueAt - prefs.defaultReminderOffsetMinutes * 60_000;
+    await ctx.db.patch(id, { dueAt, remindAt, updatedAt: Date.now() });
+    await syncReminder(ctx, id);
+    return { dueAt: task.dueAt ?? null, remindAt: task.remindAt ?? null };
+  },
+});
 
 export const snooze = mutation({
   args: { id: v.id("tasks"), minutes: v.number() },

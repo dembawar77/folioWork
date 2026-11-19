@@ -54,7 +54,9 @@ Cliquez sur une tâche pour la déplier. Vous pouvez :
 - écrire une **note** (voir ci-dessous) ;
 - **supprimer** la tâche (en bas à droite).
 
-Le **rond** à gauche termine la tâche. Un bandeau **Annuler** apparaît 5 secondes en cas d'erreur. Dans **Terminées**, un nouveau clic la rouvre.
+Le **rond** à gauche termine la tâche. Un bandeau **Annuler** apparaît 5 secondes en cas d'erreur.
+
+**Sur mobile, glissez** une tâche : **vers la droite** pour la terminer, **vers la gauche** pour la reporter à demain (même heure, même délai de rappel). Sur ordinateur : bouton **Reporter à demain** dans la tâche ouverte. Dans **Terminées**, un nouveau clic la rouvre.
 
 ## 3 bis. Tâches récurrentes
 

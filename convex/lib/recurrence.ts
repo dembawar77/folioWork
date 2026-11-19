@@ -113,3 +113,9 @@ export function dayAt(now: number, days: number, hhmm: string, timeZone: string)
   const [h, min] = hhmm.split(":").map(Number);
   return fromLocal({ ...addDays(toLocal(now, timeZone), days), h, min }, timeZone);
 }
+
+/** Heure locale « HH:mm » d'un instant. */
+export function localTime(ms: number, timeZone: string): string {
+  const l = toLocal(ms, timeZone);
+  return `${String(l.h).padStart(2, "0")}:${String(l.min).padStart(2, "0")}`;
+}

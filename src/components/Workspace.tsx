@@ -79,6 +79,16 @@ export function Workspace() {
     },
     [toggle],
   );
+  const update = useMutation(api.tasks.update);
+  const onPostponed = useCallback(
+    (task: Task, prev: { dueAt: number | null; remindAt: number | null }) => {
+      setToast({
+        text: `« ${task.title} » reportée à demain`,
+        undo: () => void update({ id: task._id as Id<"tasks">, dueAt: prev.dueAt, remindAt: prev.remindAt }),
+      });
+    },
+    [update],
+  );
   const searchRef = useRef<HTMLInputElement>(null);
 
   // Garde l'URL synchronisée (liens profonds depuis les notifications).
@@ -311,6 +321,7 @@ export function Workspace() {
                         )}
                         <TaskRow
                           onToggled={onToggled}
+                          onPostponed={onPostponed}
                           task={t}
                           expanded={expanded === t._id}
                           onToggleExpand={() => setExpanded(expanded === t._id ? null : t._id)}
