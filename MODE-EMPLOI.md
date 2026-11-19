@@ -151,7 +151,16 @@ Le nombre de cases cochées s'affiche dans la liste (ex. `2/5`).
 - **Sauvegarde complète** (`foliowork-AAAA-MM-JJ.json`) : tout le compte (tâches ouvertes et terminées, notes avec leur mise en forme, contacts, réglages, boîte de dépôt) ;
 - **Tableau Excel** (`.csv`) : une ligne par tâche (titre, statut, échéance, priorité, catégorie, répétition, personne attendue, demandeur, note…), à ouvrir dans Excel ou Google Sheets.
 
-Sur téléphone, le menu de partage s'ouvre : choisissez **Enregistrer dans Fichiers**, Drive ou votre e-mail. Sur ordinateur, le fichier part dans *Téléchargements*. Conseil : une sauvegarde par mois, rangée dans Drive. La date du dernier export s'affiche sous le bouton.
+Sur téléphone, le menu de partage s'ouvre : choisissez **Enregistrer dans Fichiers**, Drive ou votre e-mail. Sur ordinateur, le fichier part dans *Téléchargements*. La date du dernier export s'affiche sous le bouton.
+
+### Sauvegarde automatique (Telegram)
+
+Juste en dessous : **Sauvegarde automatique sur Telegram**. Activez-la une fois. Chaque **dimanche à 20h** (heure de votre fuseau), le bot vous envoie le fichier `foliowork-AAAA-MM-JJ.json`, le même que la sauvegarde complète. Vous gardez ainsi une copie par semaine dans la conversation, hors de FolioWork, sans y penser.
+
+- Il faut d'abord relier Telegram (section **Telegram** plus haut).
+- **Envoyer maintenant sur Telegram** : une copie immédiate, par exemple avant une grosse réorganisation. Vous pouvez aussi taper `/sauvegarde` au bot.
+- La date du dernier envoi et celle du prochain s'affichent sous l'interrupteur. Si Telegram ne répond pas, deux nouveaux essais partent seuls (30 min puis 2 h) et la raison de l'échec s'affiche en rouge.
+- Le fichier transite par Telegram et reste dans votre conversation. Ne l'activez pas si vos notes contiennent des informations qui ne doivent pas quitter l'app.
 
 ## 6. Le bot Telegram
 
@@ -166,6 +175,7 @@ La tâche apparaît aussitôt dans l'app, sur tous vos appareils.
 | Commande | Effet |
 |---|---|
 | `/aujourdhui` | liste des tâches du jour et des retards |
+| `/sauvegarde` | recevoir tout de suite une copie complète du compte (fichier .json) |
 | `/aide` | rappel de la syntaxe |
 
 Les rappels Telegram ont aussi les boutons **Terminé** et **+15 min**.
@@ -203,4 +213,5 @@ Se **déconnecter** efface toutes les données de l'appareil (une confirmation e
 ## 10. Limites actuelles (v0.1)
 
 - **Un seul utilisateur** : pas encore de partage avec l'équipe.
+- **Pas encore de restauration** : les sauvegardes (.json) contiennent tout, mais l'app ne sait pas encore les réimporter.
 - Les dates ne sont reconnues **qu'en français**.

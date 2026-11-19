@@ -3,6 +3,7 @@ import type { FunctionReturnType } from "convex/server";
 import { api } from "../../convex/_generated/api";
 import { recurrenceLabel } from "../../convex/lib/recurrence";
 import { PRIORITY_LABEL } from "./tasks";
+import { backupJson, sortExport } from "../../convex/lib/backupFormat";
 
 type ExportedTask = FunctionReturnType<typeof api.backup.tasksPage>["page"][number];
 type Meta = FunctionReturnType<typeof api.backup.meta>;
@@ -22,29 +23,19 @@ export async function collectBackup(convex: ConvexReactClient, onProgress?: (n: 
     if (res.isDone) break;
     cursor = res.continueCursor;
   }
-  tasks.sort((a, b) => Number(a.completed) - Number(b.completed) || (a.dueAt ?? Infinity) - (b.dueAt ?? Infinity) || a.createdAt - b.createdAt);
   return {
     format: "foliowork-export",
     version: 1,
     exportedAt: new Date().toISOString(),
     timeZone: meta.preferences.timezone,
     ...meta,
-    tasks,
+    tasks: sortExport(tasks),
   };
 }
 
 /** Sauvegarde complète, relisible par une machine (notes au format de l'éditeur incluses). */
 export function toJson(b: Backup): Blob {
-  const tasks = b.tasks.map((t) => {
-    let note: unknown = t.note;
-    try {
-      if (t.note) note = JSON.parse(t.note);
-    } catch {
-      /* note en texte brut */
-    }
-    return { ...t, note };
-  });
-  return new Blob([JSON.stringify({ ...b, tasks }, null, 2)], { type: "application/json" });
+  return new Blob([backupJson(b)], { type: "application/json" });
 }
 
 /** Tableau pour Excel / Google Sheets (séparateur « ; », accents conservés). */

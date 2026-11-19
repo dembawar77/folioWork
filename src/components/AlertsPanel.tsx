@@ -371,7 +371,85 @@ function BackupSection() {
           {state.message}
         </p>
       )}
+      <AutoBackup connected={connected} />
     </section>
+  );
+}
+
+const fmtWhen = (ms: number) =>
+  new Date(ms).toLocaleString("fr-FR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+
+function AutoBackup({ connected }: { connected: boolean }) {
+  const status = useQuery(api.backup.autoStatus);
+  const setWeekly = useMutation(api.backup.setWeekly);
+  const sendNow = useMutation(api.backup.sendNow);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!status) return <div className="mt-6 h-24" aria-busy />;
+  const { enabled, telegramLinked, pending, lastAt, lastError, nextAt } = status;
+
+  async function run<T>(fn: () => Promise<T>) {
+    setError(null);
+    try {
+      await fn();
+    } catch (err) {
+      setError(errorMessage(err, "Action impossible, réessayez"));
+    }
+  }
+
+  return (
+    <div className="mt-6 max-w-xl border-t border-line-soft pt-5 text-sm">
+      <label className="flex items-start justify-between gap-4">
+        <span>
+          Sauvegarde automatique sur Telegram
+          <span className="block text-xs text-ink-2">
+            Chaque dimanche à 20h, le bot vous envoie la sauvegarde complète. Les fichiers restent dans votre conversation : une copie par semaine, hors de FolioWork.
+          </span>
+        </span>
+        <input
+          type="checkbox"
+          role="switch"
+          checked={enabled}
+          disabled={!connected || (!telegramLinked && !enabled)}
+          onChange={(e) => void run(() => setWeekly({ enabled: e.target.checked }))}
+          className="mt-0.5 size-5 shrink-0 accent-accent disabled:opacity-40"
+        />
+      </label>
+
+      <div className="mt-3 space-y-1 text-xs" aria-live="polite">
+        {!telegramLinked ? (
+          <p className="text-ink-2">Reliez d'abord Telegram (section Telegram plus haut).</p>
+        ) : pending ? (
+          <p className="text-ink">Envoi en cours…</p>
+        ) : (
+          <>
+            {lastError && <p className="font-medium text-alert">Dernier envoi échoué : {lastError}</p>}
+            {lastAt && (
+              <p className="text-ink-2">
+                <Check className="mr-1 inline size-3.5 text-accent" aria-hidden />
+                Dernière sauvegarde : {fmtWhen(lastAt)}
+              </p>
+            )}
+            {enabled && nextAt && <p className="text-ink-3">Prochaine : {fmtWhen(nextAt)}</p>}
+          </>
+        )}
+      </div>
+
+      {telegramLinked && (
+        <button
+          onClick={() => void run(() => sendNow())}
+          disabled={pending || !connected}
+          className="mt-3 inline-flex h-10 items-center gap-2 rounded-full border border-line px-5 font-medium hover:border-ink disabled:opacity-40"
+        >
+          <Send className="size-4" aria-hidden /> Envoyer maintenant sur Telegram
+        </button>
+      )}
+      {error && (
+        <p role="alert" className="mt-2 font-medium text-alert">
+          {error}
+        </p>
+      )}
+    </div>
   );
 }
 

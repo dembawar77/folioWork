@@ -10,8 +10,10 @@
 
 import type * as auth from "../auth.js";
 import type * as backup from "../backup.js";
+import type * as crons from "../crons.js";
 import type * as http from "../http.js";
 import type * as intake from "../intake.js";
+import type * as lib_backupFormat from "../lib/backupFormat.js";
 import type * as lib_format from "../lib/format.js";
 import type * as lib_parse from "../lib/parse.js";
 import type * as lib_recurrence from "../lib/recurrence.js";
@@ -34,8 +36,10 @@ import type {
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   backup: typeof backup;
+  crons: typeof crons;
   http: typeof http;
   intake: typeof intake;
+  "lib/backupFormat": typeof lib_backupFormat;
   "lib/format": typeof lib_format;
   "lib/parse": typeof lib_parse;
   "lib/recurrence": typeof lib_recurrence;

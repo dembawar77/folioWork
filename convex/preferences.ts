@@ -3,7 +3,7 @@ import { internalMutation, internalQuery, mutation, query, type MutationCtx, typ
 import type { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { requireUser } from "./users";
-import { nextOccurrence } from "./lib/time";
+import { nextBackupAt, nextOccurrence } from "./lib/time";
 
 export const DEFAULT_PREFS = {
   timezone: "Africa/Dakar",
@@ -64,7 +64,9 @@ export const save = mutation({
       .query("preferences")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .unique();
-    const patch = Object.fromEntries(Object.entries(args).filter(([, val]) => val !== undefined));
+    const patch: Record<string, unknown> = Object.fromEntries(Object.entries(args).filter(([, val]) => val !== undefined));
+    // Changement de fuseau : la sauvegarde du dimanche suit la nouvelle heure locale.
+    if (existing?.weeklyBackup && args.timezone && args.timezone !== existing.timezone) patch.backupNextAt = nextBackupAt(args.timezone, Date.now());
     if (existing) await ctx.db.patch(existing._id, patch);
     else await ctx.db.insert("preferences", { userId, ...DEFAULT_PREFS, ...patch });
     await rescheduleSummary(ctx, userId);

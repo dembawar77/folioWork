@@ -48,6 +48,7 @@ const HELP = [
   "• <code>@Nom</code> : en attente de cette personne, relance automatique tous les 2 jours",
   "",
   "/aujourdhui : vos tâches du jour",
+  "/sauvegarde : recevoir maintenant une copie complète de votre compte",
 ].join("\n");
 
 http.route({
@@ -131,6 +132,12 @@ http.route({
           return `${flag}${formatTime(t.dueAt, digest.timezone)} · ${escapeHtml(t.title)}${t.overdue ? " <i>(en retard)</i>" : ""}`;
         });
         await sendMessage(chatId, lines.length ? `<b>Aujourd'hui</b>\n\n${lines.join("\n")}` : "Rien de prévu aujourd'hui.");
+        return new Response("ok");
+      }
+
+      if (text === "/sauvegarde" || text === "/backup") {
+        const r = await ctx.runMutation(internal.backup.requestFromBot, { userId });
+        if (r === "busy") await sendMessage(chatId, "Une sauvegarde vient de partir : elle est juste au-dessus ou arrive dans un instant.");
         return new Response("ok");
       }
 

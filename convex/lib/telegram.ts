@@ -34,3 +34,36 @@ export function reminderButtons(taskId: string): InlineButton[][] {
     { text: "+15 min", callback_data: `snz:${taskId}` },
   ]];
 }
+
+/**
+ * Envoie un fichier (50 Mo max côté Telegram).
+ * `retry` : l'échec peut passer en réessayant (réseau, 5xx, 429), contrairement à un bot bloqué ou un chat supprimé.
+ */
+export async function sendDocument(
+  chatId: string,
+  file: Blob,
+  filename: string,
+  captionHtml: string,
+): Promise<{ ok: true } | { ok: false; error: string; retry: boolean }> {
+  const token = process.env.TELEGRAM_BOT_TOKEN;
+  if (!token) return { ok: false, error: "Bot Telegram non configuré sur le serveur", retry: false };
+  const form = new FormData();
+  form.append("chat_id", chatId);
+  form.append("document", file, filename);
+  form.append("caption", captionHtml);
+  form.append("parse_mode", "HTML");
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendDocument`, { method: "POST", body: form });
+    const json = await res.json().catch(() => null);
+    if (json?.ok) return { ok: true };
+    const desc: string = json?.description ?? `Erreur Telegram ${res.status}`;
+    console.error("Telegram sendDocument a échoué", res.status, desc);
+    if (res.status === 401 || res.status === 404) return { ok: false, error: "Bot Telegram mal configuré sur le serveur (jeton refusé)", retry: false };
+    if (/blocked/i.test(desc)) return { ok: false, error: "Le bot a été bloqué dans Telegram", retry: false };
+    if (/chat not found|deactivated/i.test(desc)) return { ok: false, error: "Conversation Telegram introuvable : reliez Telegram à nouveau", retry: false };
+    return { ok: false, error: desc, retry: res.status >= 500 || res.status === 429 };
+  } catch (err) {
+    console.error("Telegram sendDocument injoignable", err);
+    return { ok: false, error: "Telegram injoignable", retry: true };
+  }
+}

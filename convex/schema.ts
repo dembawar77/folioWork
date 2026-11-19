@@ -100,7 +100,17 @@ export default defineSchema({
     /** Notifications discrètes : ni titre ni note sur l'écran de l'appareil. */
     discreetNotifications: v.optional(v.boolean()),
     lastTestPushAt: v.optional(v.number()),
-  }).index("by_user", ["userId"]),
+    /** Sauvegarde envoyée chaque dimanche soir sur Telegram. */
+    weeklyBackup: v.optional(v.boolean()),
+    /** Prochain envoi automatique (absent si désactivé). */
+    backupNextAt: v.optional(v.number()),
+    lastBackupAt: v.optional(v.number()),
+    lastBackupError: v.optional(v.string()),
+    /** Envoi en cours (demandé à la main ou automatique). */
+    backupPendingSince: v.optional(v.number()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_backup_next", ["backupNextAt"]),
 
   /** Carnet de contacts pour les relances (nom → numéro WhatsApp). */
   contacts: defineTable({

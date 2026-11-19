@@ -48,3 +48,18 @@ export function localDayBounds(timeZone: string, at: number): { start: number; e
   const end = nextOccurrence("00:00", timeZone, startOfToday + 1);
   return { start: startOfToday, end };
 }
+
+function isSunday(timeZone: string, at: number) {
+  return new Intl.DateTimeFormat("en-US", { timeZone, weekday: "short" }).format(new Date(at)) === "Sun";
+}
+
+/** Prochain dimanche 20h (heure du compte), strictement après `now` : sauvegarde hebdomadaire. */
+export function nextBackupAt(timeZone: string, now: number): number {
+  let t = now;
+  for (let i = 0; i < 8; i++) {
+    const c = nextOccurrence("20:00", timeZone, t);
+    if (isSunday(timeZone, c)) return c;
+    t = c;
+  }
+  throw new Error("nextBackupAt: aucun dimanche trouvé");
+}
