@@ -13,6 +13,7 @@ import type * as http from "../http.js";
 import type * as intake from "../intake.js";
 import type * as lib_format from "../lib/format.js";
 import type * as lib_parse from "../lib/parse.js";
+import type * as lib_pushEndpoint from "../lib/pushEndpoint.js";
 import type * as lib_recurrence from "../lib/recurrence.js";
 import type * as lib_telegram from "../lib/telegram.js";
 import type * as lib_time from "../lib/time.js";
@@ -36,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   intake: typeof intake;
   "lib/format": typeof lib_format;
   "lib/parse": typeof lib_parse;
+  "lib/pushEndpoint": typeof lib_pushEndpoint;
   "lib/recurrence": typeof lib_recurrence;
   "lib/telegram": typeof lib_telegram;
   "lib/time": typeof lib_time;
