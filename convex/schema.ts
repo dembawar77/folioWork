@@ -79,9 +79,12 @@ export default defineSchema({
       }),
     ),
     followUpJobId: v.optional(v.id("_scheduled_functions")),
+    /** Identifiant choisi par l'appareil à la création (hors connexion) : évite les doublons au renvoi. */
+    clientId: v.optional(v.string()),
     updatedAt: v.number(),
   })
     .index("by_user", ["userId"])
+    .index("by_user_client", ["userId", "clientId"])
     .index("by_user_completed", ["userId", "completed"])
     .index("by_user_completed_at", ["userId", "completed", "completedAt"])
     .searchIndex("search_title", { searchField: "title", filterFields: ["userId", "completed"] })

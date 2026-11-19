@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useMutation, useQuery } from "convex/react";
 import { X, CalendarClock, Flag, Tag, Repeat, Hourglass, ArrowUp } from "lucide-react";
-import { api } from "../../convex/_generated/api";
+import { ops, useCachedQuery } from "../lib/offline";
 import { parseQuickTask } from "../../convex/lib/parse";
 import { dayAt, recurrenceLabel } from "../../convex/lib/recurrence";
 import { formatDueLong, fromLocalInput, toLocalInput, userTimeZone } from "../lib/dates";
@@ -42,8 +41,7 @@ export function NewTaskSheet({
   defaultWorkstream: string | null;
   prefill: string;
 }) {
-  const create = useMutation(api.tasks.create);
-  const contacts = useQuery(api.tasks.contacts) ?? [];
+  const contacts = useCachedQuery("contacts") ?? [];
   const [text, setText] = useState("");
   const [when, setWhen] = useState<When>("auto");
   const [custom, setCustom] = useState("");
@@ -100,7 +98,7 @@ export function NewTaskSheet({
     setBusy(true);
     setError(null);
     try {
-      const id = await create({
+      const id = ops.create({
         title,
         dueAt,
         priority: prio,

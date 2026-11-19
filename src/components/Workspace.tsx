@@ -3,10 +3,10 @@ import { usePaginatedQuery, useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
-import { Bell, CalendarDays, CheckCheck, Inbox, LogOut, Plus, Search, Sun, WifiOff, X } from "lucide-react";
+import { Bell, CalendarDays, CheckCheck, CloudUpload, Inbox, LogOut, Plus, Search, Sun, WifiOff, X } from "lucide-react";
 import { useMutation } from "convex/react";
-import type { Id } from "../../convex/_generated/dataModel";
 import { api } from "../../convex/_generated/api";
+import { clearOffline, keyOf, onSyncError, ops, pendingCount, useCachedQuery, useConnected, usePending, useTasks } from "../lib/offline";
 import { counts, filterTasks, groupOf, VIEW_LABEL, workstreamsOf, type Task, type View } from "../lib/tasks";
 import { NewTaskSheet } from "./NewTaskSheet";
 import { forgetThisDevice } from "../lib/push";
@@ -24,32 +24,36 @@ function readUrl() {
   return { view: view && VIEWS.includes(view) ? view : null, task: p.get("task") };
 }
 
-function useOnline() {
-  const [online, setOnline] = useState(navigator.onLine);
+/** Hors ligne depuis plus de 3 s (évite un clignotement au démarrage ou lors d'une micro-coupure). */
+function useOffline() {
+  const connected = useConnected();
+  const [offline, setOffline] = useState(false);
   useEffect(() => {
-    const on = () => setOnline(true);
-    const off = () => setOnline(false);
-    window.addEventListener("online", on);
-    window.addEventListener("offline", off);
-    return () => {
-      window.removeEventListener("online", on);
-      window.removeEventListener("offline", off);
-    };
-  }, []);
-  return online;
+    if (connected) {
+      setOffline(false);
+      return;
+    }
+    const id = setTimeout(() => setOffline(true), 3000);
+    return () => clearTimeout(id);
+  }, [connected]);
+  return offline;
 }
 
 export function Workspace() {
-  const tasks = useQuery(api.tasks.list);
-  const me = useQuery(api.users.me);
-  const prefs = useQuery(api.preferences.get);
+  const tasks = useTasks();
+  const me = useCachedQuery("me");
+  const prefs = useCachedQuery("prefs");
   const { signOut: rawSignOut } = useAuthActions();
   const unsubscribePush = useMutation(api.push.unsubscribe);
   const signOut = useCallback(async () => {
+    const n = pendingCount();
+    if (n > 0 && !window.confirm(`${n} modification${n > 1 ? "s" : ""} pas encore envoyée${n > 1 ? "s" : ""} (hors ligne) sera perdue${n > 1 ? "s" : ""}. Se déconnecter quand même ?`)) return;
     await forgetThisDevice((endpoint) => unsubscribePush({ endpoint }));
+    await clearOffline();
     await rawSignOut();
   }, [rawSignOut, unsubscribePush]);
-  const online = useOnline();
+  const offline = useOffline();
+  const pending = usePending();
   // Rafraîchit chaque minute les états qui dépendent de l'heure (en retard, « Dans 45 min »).
   const [tick, setTick] = useState(0);
   useEffect(() => {
@@ -67,7 +71,8 @@ export function Workspace() {
   const [adding, setAdding] = useState(false);
   const [prefill, setPrefill] = useState("");
   const [toast, setToast] = useState<{ text: string; undo?: () => void } | null>(null);
-  const toggle = useMutation(api.tasks.toggle);
+  // Modification refusée par le serveur après coup (ex. tâche supprimée sur un autre appareil).
+  useEffect(() => onSyncError((text) => setToast({ text })), []);
 
   useEffect(() => {
     if (!toast) return;
@@ -80,21 +85,17 @@ export function Workspace() {
       if (!completed) return;
       setToast({
         text: task.recurrence ? `« ${task.title} » terminée · la suivante est planifiée` : `« ${task.title} » terminée`,
-        undo: () => void toggle({ id: task._id as Id<"tasks"> }),
+        undo: () => ops.setDone(task._id, false),
       });
     },
-    [toggle],
+    [],
   );
-  const update = useMutation(api.tasks.update);
-  const onPostponed = useCallback(
-    (task: Task, prev: { dueAt: number | null; remindAt: number | null }) => {
-      setToast({
-        text: `« ${task.title} » reportée à demain`,
-        undo: () => void update({ id: task._id as Id<"tasks">, dueAt: prev.dueAt, remindAt: prev.remindAt }),
-      });
-    },
-    [update],
-  );
+  const onPostponed = useCallback((task: Task, prev: { dueAt: number | null; remindAt: number | null }) => {
+    setToast({
+      text: `« ${task.title} » reportée à demain`,
+      undo: () => ops.update(task._id, { dueAt: prev.dueAt, remindAt: prev.remindAt }),
+    });
+  }, []);
   const searchRef = useRef<HTMLInputElement>(null);
 
   // Garde l'URL synchronisée (liens profonds depuis les notifications).
@@ -174,12 +175,19 @@ export function Workspace() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const visible = useMemo(() => {
     if (view === "done") {
-      const source = (searching ? doneSearch : donePage.results) ?? [];
-      return workstream ? source.filter((t) => t.workstream === workstream) : source;
+      const server = searching ? doneSearch : donePage.status === "LoadingFirstPage" ? undefined : donePage.results;
+      // Hors ligne (ou en attendant le serveur) : les 300 dernières terminées gardées sur l'appareil.
+      if (server === undefined) {
+        return tasks ? filterTasks(tasks, "done", { workstream, search }).sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0)) : [];
+      }
+      // Modifications pas encore envoyées (ex. tâche rouverte) appliquées par-dessus.
+      const local = new Map((tasks ?? []).map((t) => [t._id, t]));
+      const merged = server.map((t) => local.get(t._id) ?? t).filter((t) => t.completed);
+      return workstream ? merged.filter((t) => t.workstream === workstream) : merged;
     }
     return tasks ? filterTasks(tasks, view, { workstream, search }) : [];
-  }, [tasks, view, workstream, search, tick, searching, doneSearch, donePage.results]);
-  const listLoading = view === "done" ? (searching ? doneSearch === undefined : donePage.status === "LoadingFirstPage") : tasks === undefined;
+  }, [tasks, view, workstream, search, tick, searching, doneSearch, donePage.results, donePage.status]);
+  const listLoading = tasks === undefined;
   const streamCounts = useMemo(() => {
     const m = new Map<string, number>();
     for (const t of tasks ?? []) if (!t.completed && t.workstream) m.set(t.workstream, (m.get(t.workstream) ?? 0) + 1);
@@ -263,6 +271,8 @@ export function Workspace() {
         )}
       </header>
 
+      {(offline || pending > 0) && <SyncBanner offline={offline} pending={pending} />}
+
       <div className="mx-auto flex max-w-[1440px]">
         {/* ── Rail gauche (ordinateur) ─────────────────────── */}
         <aside className="sticky top-14 hidden h-[calc(100dvh-3.5rem)] w-60 shrink-0 flex-col border-r border-line px-4 py-5 md:flex">
@@ -334,7 +344,7 @@ export function Workspace() {
                       const showHeader = g && g.key !== prev?.key && (view !== "today" || visible.some((x) => groupOf(x, view, now)?.key !== g.key));
                       const groupCount = g ? visible.filter((x) => groupOf(x, view, now)?.key === g.key).length : 0;
                       return (
-                      <div key={t._id}>
+                      <div key={keyOf(t._id)}>
                         {showHeader && (
                           <p className={`eyebrow mb-1 flex gap-2 first-letter:uppercase ${g.tone === "alert" ? "text-alert" : g.tone === "accent" ? "text-accent" : "text-ink"} ${i === 0 ? "mt-3" : "mt-8"}`}>
                             {g.label}
@@ -345,8 +355,8 @@ export function Workspace() {
                           onToggled={onToggled}
                           onPostponed={onPostponed}
                           task={t}
-                          expanded={expanded === t._id}
-                          onToggleExpand={() => setExpanded(expanded === t._id ? null : t._id)}
+                          expanded={expanded !== null && keyOf(expanded) === keyOf(t._id)}
+                          onToggleExpand={() => setExpanded(expanded !== null && keyOf(expanded) === keyOf(t._id) ? null : t._id)}
                           workstreams={streams}
                           defaultOffset={prefs?.defaultReminderOffsetMinutes ?? 0}
                         />
@@ -422,11 +432,30 @@ export function Workspace() {
         </div>
       )}
 
-      {!online && (
-        <div role="status" className="fixed inset-x-0 top-[60px] z-30 mx-auto flex w-fit items-center gap-2 rounded-full bg-ink px-4 py-2 text-xs text-white md:top-16">
-          <WifiOff className="size-3.5" aria-hidden /> Hors ligne : les modifications seront envoyées à la reconnexion.
-        </div>
-      )}
+    </div>
+  );
+}
+
+/** Hors ligne, ou modifications en cours d'envoi depuis un moment. */
+function SyncBanner({ offline, pending }: { offline: boolean; pending: number }) {
+  // En ligne, l'envoi prend une fraction de seconde : on ne montre rien sauf s'il traîne.
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    if (offline) return;
+    const id = setTimeout(() => setSlow(true), 2500);
+    return () => {
+      clearTimeout(id);
+      setSlow(false);
+    };
+  }, [offline, pending > 0]);
+  if (!offline && !slow) return null;
+  const n = `${pending} modification${pending > 1 ? "s" : ""}`;
+  return (
+    <div role="status" className="animate-fade sticky top-[52px] z-20 flex h-8 items-center justify-center gap-2 bg-ink px-4 text-xs text-white md:top-14">
+      {offline ? <WifiOff className="size-3.5 shrink-0" aria-hidden /> : <CloudUpload className="size-3.5 shrink-0" aria-hidden />}
+      <span className="truncate">
+        {offline ? (pending > 0 ? `Hors ligne · ${n} en attente d'envoi` : "Hors ligne · vos tâches restent disponibles") : `Envoi de ${n}…`}
+      </span>
     </div>
   );
 }

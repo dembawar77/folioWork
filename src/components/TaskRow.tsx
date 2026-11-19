@@ -1,13 +1,10 @@
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
-import { useMutation } from "convex/react";
 import { ChevronDown, FileText, Trash2, BellOff, Bell, Repeat, Hourglass, CalendarClock, Inbox, MessageCircle } from "lucide-react";
 import { formatPhone, whatsappLink } from "../../convex/lib/whatsapp";
 import { WaitingSection } from "./WaitingSection";
 import { SwipeRow } from "./SwipeRow";
 import { recurrenceLabel } from "../../convex/lib/recurrence";
-import { api } from "../../convex/_generated/api";
-import { errorMessage } from "../lib/errors";
-import type { Id } from "../../convex/_generated/dataModel";
+import { isLocalId, keyOf, ops } from "../lib/offline";
 import { formatDueShort, formatIn, fromLocalInput, toLocalInput, userTimeZone } from "../lib/dates";
 import { PRIORITIES, PRIORITY_LABEL, RECURRENCE_OPTIONS, recurrenceValue, type Priority, type Task } from "../lib/tasks";
 
@@ -46,12 +43,6 @@ export function TaskRow({
   workstreams: string[];
   defaultOffset: number;
 }) {
-  const toggle = useMutation(api.tasks.toggle).withOptimisticUpdate((store, { id }) => {
-    const list = store.getQuery(api.tasks.list, {});
-    if (list) store.setQuery(api.tasks.list, {}, list.map((t) => (t._id === id ? { ...t, completed: !t.completed, completedAt: Date.now() } : t)));
-  });
-  const postpone = useMutation(api.tasks.postpone);
-  const markSeen = useMutation(api.tasks.markSeen);
   // Une nouvelle demande est marquée « vue » quand on la referme (pas à l'ouverture,
   // sinon elle quitterait la liste pendant qu'on la lit).
   const unseenRef = useRef(false);
@@ -59,15 +50,15 @@ export function TaskRow({
   useEffect(() => {
     if (!expanded) return;
     return () => {
-      if (unseenRef.current) void markSeen({ id: task._id });
+      if (unseenRef.current) ops.markSeen(task._id);
     };
-  }, [expanded, task._id, markSeen]);
+  }, [expanded, task._id]);
   const complete = () => {
-    void toggle({ id: task._id });
+    ops.setDone(task._id, !task.completed);
     onToggled?.(task, !task.completed);
   };
   const postponeTomorrow = async () => {
-    const prev = await postpone({ id: task._id, days: 1 });
+    const prev = ops.postpone(task, 1);
     onPostponed?.(task, prev);
   };
   const now = Date.now();
@@ -193,34 +184,22 @@ function TaskDetail({
   defaultOffset: number;
   onPostpone: () => Promise<void>;
 }) {
-  const update = useMutation(api.tasks.update);
-  const saveNote = useMutation(api.tasks.saveNote);
-  const remove = useMutation(api.tasks.remove);
-  const [error, setError] = useState<string | null>(null);
-
-  const run = async (p: Promise<unknown>) => {
-    setError(null);
-    try {
-      await p;
-    } catch (err) {
-      setError(errorMessage(err, "Modification impossible"));
-    }
-  };
-
-  const id = task._id as Id<"tasks">;
+  // Les modifications s'affichent tout de suite et partent au serveur dès que possible
+  // (même hors ligne) ; un refus du serveur s'affiche dans le bandeau du bas.
+  const update = (args: Parameters<typeof ops.update>[1]) => ops.update(task._id, args);
   const reminder = reminderValue(task);
 
   function setDue(value: string) {
     const dueAt = fromLocalInput(value);
-    if (dueAt === undefined) return run(update({ id, dueAt: null, remindAt: null }));
+    if (dueAt === undefined) return update({ dueAt: null, remindAt: null });
     const offset = reminder === "none" ? (task.dueAt === undefined ? defaultOffset : null) : reminder === "custom" ? defaultOffset : Number(reminder);
-    return run(update({ id, dueAt, remindAt: offset === null ? null : dueAt - offset * 60_000 }));
+    return update({ dueAt, remindAt: offset === null ? null : dueAt - offset * 60_000 });
   }
 
   function setReminder(value: string) {
-    if (value === "none") return run(update({ id, remindAt: null }));
+    if (value === "none") return update({ remindAt: null });
     if (task.dueAt === undefined) return;
-    return run(update({ id, remindAt: task.dueAt - Number(value) * 60_000 }));
+    return update({ remindAt: task.dueAt - Number(value) * 60_000 });
   }
 
   return (
@@ -250,7 +229,7 @@ function TaskDetail({
           </select>
         </Field>
         <Field label="Priorité">
-          <select value={task.priority} onChange={(e) => run(update({ id, priority: e.target.value as Priority }))} className="w-full bg-transparent outline-none">
+          <select value={task.priority} onChange={(e) => update({ priority: e.target.value as Priority })} className="w-full bg-transparent outline-none">
             {PRIORITIES.map((p) => (
               <option key={p.value} value={p.value}>
                 {p.label}
@@ -263,7 +242,7 @@ function TaskDetail({
             value={recurrenceValue(task.recurrence)}
             onChange={(e) => {
               const opt = RECURRENCE_OPTIONS.find((o) => o.value === e.target.value);
-              if (opt) void run(update({ id, recurrence: opt.rule }));
+              if (opt) void update({ recurrence: opt.rule });
             }}
             disabled={task.dueAt === undefined}
             title={task.dueAt === undefined ? "Ajoutez d'abord une échéance" : undefined}
@@ -282,7 +261,7 @@ function TaskDetail({
             defaultValue={task.workstream ?? ""}
             placeholder="Aucune"
             maxLength={40}
-            onBlur={(e) => e.target.value !== (task.workstream ?? "") && run(update({ id, workstream: e.target.value || null }))}
+            onBlur={(e) => e.target.value !== (task.workstream ?? "") && update({ workstream: e.target.value || null })}
             onKeyDown={(e) => e.key === "Enter" && (e.target as HTMLInputElement).blur()}
             className="w-full bg-transparent outline-none placeholder:text-ink-3"
           />
@@ -295,11 +274,12 @@ function TaskDetail({
       </div>
 
       {task.request && <RequestSection task={task} />}
-      <WaitingSection task={task} />
+      {/* Relances : disponibles une fois la tâche arrivée au serveur. */}
+      {!isLocalId(task._id) && <WaitingSection task={task} />}
 
       <div className="mt-4 border border-line bg-canvas p-3">
         <Suspense fallback={<div className="h-24" aria-busy />}>
-          <NoteEditor key={task._id} initial={task.note} onChange={(c) => saveNote({ id, ...c })} />
+          <NoteEditor key={keyOf(task._id)} initial={task.note} onChange={async (c) => ops.saveNote(task._id, c)} />
         </Suspense>
       </div>
 
@@ -313,7 +293,7 @@ function TaskDetail({
         {!task.completed && (
           <button
             type="button"
-            onClick={() => void run(onPostpone())}
+            onClick={() => void onPostpone()}
             className="inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-ink-2 hover:bg-hover hover:text-ink"
           >
             <CalendarClock className="size-3.5" aria-hidden /> Reporter à demain
@@ -321,18 +301,13 @@ function TaskDetail({
         )}
         <button
           type="button"
-          onClick={() => window.confirm(`Supprimer « ${task.title} » ?`) && run(remove({ id }))}
+          onClick={() => window.confirm(`Supprimer « ${task.title} » ?`) && ops.remove(task._id)}
           className="inline-flex h-9 items-center gap-1.5 px-2 text-ink-2 hover:bg-hover hover:text-ink"
         >
           <Trash2 className="size-3.5" aria-hidden /> Supprimer
         </button>
         </span>
       </div>
-      {error && (
-        <p role="alert" className="mt-2 text-xs font-medium text-alert">
-          {error}
-        </p>
-      )}
     </div>
   );
 }
@@ -363,13 +338,12 @@ function Meta({ items }: { items: React.ReactNode[] }) {
 }
 
 function TitleInput({ task }: { task: Task }) {
-  const update = useMutation(api.tasks.update);
   const [title, setTitle] = useState(task.title);
   useEffect(() => setTitle(task.title), [task.title]);
   const commit = () => {
     const t = title.trim();
     if (!t) setTitle(task.title);
-    else if (t !== task.title) void update({ id: task._id as Id<"tasks">, title: t }).catch(() => setTitle(task.title));
+    else if (t !== task.title) ops.update(task._id, { title: t });
   };
   return (
     <input

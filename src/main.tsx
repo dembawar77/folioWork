@@ -6,6 +6,7 @@ import { api } from "../convex/_generated/api";
 import { App } from "./App";
 import { registerServiceWorker } from "./lib/push";
 import { hideSplash } from "./lib/splash";
+import { loadOffline, startSync } from "./lib/offline";
 import "./index.css";
 
 const url = import.meta.env.VITE_CONVEX_URL as string | undefined;
@@ -37,6 +38,9 @@ if (!url) {
   );
 } else {
   const convex = new ConvexReactClient(url);
+  startSync(convex);
+  // Les dernières données gardées sur l'appareil sont lues avant le premier affichage.
+  await loadOffline();
   root.render(
     <StrictMode>
       <ConvexAuthProvider

@@ -67,6 +67,7 @@ export async function insertTask(
     remindAt?: number | null;
     recurrence?: Recurrence;
     waitingFor?: string;
+    clientId?: string;
   },
 ) {
   const prefs = await getPrefs(ctx, userId);
@@ -90,6 +91,7 @@ export async function insertTask(
     dueAt,
     remindAt,
     recurrence,
+    clientId: input.clientId,
     updatedAt: Date.now(),
   });
   await syncReminder(ctx, id);
@@ -302,9 +304,19 @@ export const create = mutation({
     remindAt: v.optional(v.union(v.number(), v.null())),
     recurrence: v.optional(vRecurrence),
     waitingFor: v.optional(v.string()),
+    /** Fourni par l'appareil : une création renvoyée après une coupure ne fait pas de doublon. */
+    clientId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await requireUser(ctx);
+    if (args.clientId !== undefined) {
+      if (!/^[\w-]{8,64}$/.test(args.clientId)) throw new ConvexError("Identifiant invalide");
+      const existing = await ctx.db
+        .query("tasks")
+        .withIndex("by_user_client", (q) => q.eq("userId", userId).eq("clientId", args.clientId))
+        .first();
+      if (existing) return existing._id;
+    }
     return insertTask(ctx, userId, { ...args, priority: args.priority ?? "normal" });
   },
 });
@@ -448,10 +460,23 @@ export const toggle = mutation({
   },
 });
 
+/** Terminer / rouvrir avec un état explicite : renvoyer deux fois la même demande ne fait rien de plus. */
+export const setDone = mutation({
+  args: { id: v.id("tasks"), completed: v.boolean() },
+  handler: async (ctx, { id, completed }) => {
+    const userId = await requireUser(ctx);
+    const task = await ownTask(ctx, userId, id);
+    if (task.completed !== completed) await setCompleted(ctx, task, completed);
+  },
+});
+
 export const remove = mutation({
   args: { id: v.id("tasks") },
   handler: async (ctx, { id }) => {
     const userId = await requireUser(ctx);
+    // Déjà supprimée (renvoi après une coupure, ou autre appareil) : rien à faire.
+    const existing = await ctx.db.get(id);
+    if (!existing) return;
     const task = await ownTask(ctx, userId, id);
     await cancelJob(ctx, task.reminderJobId);
     await cancelJob(ctx, task.followUpJobId);

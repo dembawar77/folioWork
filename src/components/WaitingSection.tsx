@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
 import { Hourglass, MessageCircle, Check, Pencil, CalendarClock } from "lucide-react";
 import { api } from "../../convex/_generated/api";
+import { useCachedQuery } from "../lib/offline";
 import type { Id } from "../../convex/_generated/dataModel";
 import { followUpMessage, formatPhone, normalizePhone, whatsappLink } from "../../convex/lib/whatsapp";
 import { formatDueLong, userTimeZone } from "../lib/dates";
@@ -146,7 +147,7 @@ function WaitingStatus({ task, onEdit }: { task: Task; onEdit: () => void }) {
 }
 
 function WaitingForm({ task, onDone }: { task: Task; onDone: () => void }) {
-  const contacts = useQuery(api.tasks.contacts) ?? [];
+  const contacts = useCachedQuery("contacts") ?? [];
   const setWaiting = useMutation(api.tasks.setWaiting);
   const [name, setName] = useState(task.waitingFor?.name ?? "");
   const [phone, setPhone] = useState(task.waitingFor?.phone ? formatPhone(task.waitingFor.phone) : "");

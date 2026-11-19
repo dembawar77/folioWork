@@ -173,8 +173,21 @@ Pour délier le compte : **Alertes → Telegram → Délier**.
 | `/` | rechercher (titres **et** contenu des notes ; dans **Terminées**, tout l'historique) |
 | `Échap` | refermer la tâche ouverte |
 
-## 9. Limites actuelles (v0.1)
+## 9. Hors connexion
 
-- **Hors connexion** : si le réseau coupe un instant, vos modifications partent dès qu'il revient. Mais si vous **fermez l'app** sans réseau, les modifications non envoyées sont perdues, et l'app rouverte hors ligne n'affiche pas vos tâches.
+FolioWork garde vos tâches et vos notes sur l'appareil. Sans réseau :
+
+- l'app **s'ouvre** et affiche vos tâches, vos notes et les 300 dernières terminées ;
+- vous pouvez **ajouter**, **terminer**, **reporter**, **modifier**, **supprimer** une tâche et **écrire dans une note** : tout s'affiche aussitôt ;
+- une barre noire indique **« Hors ligne · 2 modifications en attente d'envoi »**.
+
+Les modifications partent seules, dans l'ordre, dès que le réseau revient, **même si vous avez fermé l'app entre-temps**. Rien n'est envoyé en double.
+
+Restent réservés au réseau : les relances (« En attente de »), la boîte de dépôt, les réglages d'**Alertes** et la recherche dans tout l'historique des terminées. Une tâche créée hors ligne reçoit son rappel une fois arrivée au serveur.
+
+Se **déconnecter** efface toutes les données de l'appareil (une confirmation est demandée s'il reste des modifications non envoyées).
+
+## 10. Limites actuelles (v0.1)
+
 - **Un seul utilisateur** : pas encore de partage avec l'équipe.
 - Les dates ne sont reconnues **qu'en français**.

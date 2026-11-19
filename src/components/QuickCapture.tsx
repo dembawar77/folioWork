@@ -1,7 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
-import { useMutation } from "convex/react";
 import { CornerDownLeft } from "lucide-react";
-import { api } from "../../convex/_generated/api";
+import { ops } from "../lib/offline";
 import { errorMessage } from "../lib/errors";
 import { parseQuickTask } from "../../convex/lib/parse";
 import { formatDueLong, userTimeZone } from "../lib/dates";
@@ -12,7 +11,6 @@ export type QuickCaptureHandle = { focus: () => void; prefill: (text: string) =>
 
 export const QuickCapture = forwardRef<QuickCaptureHandle, { defaultWorkstream?: string | null; onCreated?: (id: string) => void }>(
   function QuickCapture({ defaultWorkstream, onCreated }, ref) {
-    const create = useMutation(api.tasks.create);
     const [value, setValue] = useState("");
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -45,7 +43,7 @@ export const QuickCapture = forwardRef<QuickCaptureHandle, { defaultWorkstream?:
       setBusy(true);
       setError(null);
       try {
-        const id = await create({
+        const id = ops.create({
           title: parsed.title,
           dueAt: parsed.dueAt,
           priority: parsed.priority,
