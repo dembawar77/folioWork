@@ -78,10 +78,17 @@ Pour tout ce qui dépend de quelqu'un d'autre (BAT, devis, validation) :
 
 FolioWork vous rappelle **à 9h** quand il est temps de relancer, avec le bouton **Relancer sur WhatsApp** : WhatsApp s'ouvre avec le message déjà rédigé (« Bonjour Moussa, je reviens vers vous au sujet de « BAT affiche Kirène » (prévu jeudi à 10:00). Où en sommes-nous ? Merci. »). Vous pouvez le modifier avant d'envoyer.
 
-- **Reçu** : la personne a répondu, la tâche n'attend plus personne (elle reste ouverte).
-- Sans réponse, la relance revient au même rythme.
+Après **Relancer sur WhatsApp**, FolioWork demande **« Message envoyé ? »** : la relance n'est comptée que si vous répondez **Oui, j'ai relancé**. Si vous avez relancé autrement (appel, e-mail, de vive voix) : **J'ai relancé**.
+
+Une personne **à relancer reste dans la liste** (en ambre) tant que vous n'avez pas choisi :
+
+- **J'ai relancé** : prochaine relance au rythme choisi ;
+- **Reçu** : la personne a répondu, la tâche n'attend plus personne (elle reste ouverte) ;
+- **Reporter** : demain, dans 2 jours ou dans 1 semaine.
+
+Vous pouvez donc ouvrir la vue **En attente** quand ça vous arrange et faire toutes vos relances d'un coup. Sans action de votre part, la notification revient le lendemain à 9h.
 - La vue **En attente** regroupe tout par personne ; « À relancer » s'affiche en ambre.
-- Sur Telegram : boutons **Relancer sur WhatsApp**, **Reçu**, **Dans 2 jours**.
+- Sur Telegram : boutons **Relancer sur WhatsApp**, **J'ai relancé**, **Reçu**, **Dans 2 jours**.
 
 La personne relancée n'a besoin ni de compte ni de l'app.
 
@@ -125,6 +132,7 @@ Le nombre de cases cochées s'affiche dans la liste (ex. `2/5`).
 - Le rappel arrive sur **tous les appareils activés** et sur **Telegram**.
 - Boutons dans la notification : **✅ Terminé** et **⏰ +15 min** (ordinateur et Android ; sur iPhone, touchez la notification pour ouvrir la tâche).
 - Toucher la notification ouvre directement la tâche.
+- Si aucun appareil ni Telegram n'a accepté le rappel, la tâche l'indique en rouge (« Rappel non délivré »). En cas de panne passagère, FolioWork réessaie 3 fois (après 2, 10 puis 30 minutes).
 
 **Activer un nouvel appareil** : sur cet appareil, **Alertes → Activer les notifications**, puis **Envoyer un test**.
 
@@ -160,7 +168,7 @@ Pour délier le compte : **Alertes → Telegram → Délier**.
 | Touche | Action |
 |---|---|
 | `N` | nouvelle tâche |
-| `/` | rechercher (titres **et** contenu des notes) |
+| `/` | rechercher (titres **et** contenu des notes ; dans **Terminées**, tout l'historique) |
 | `Échap` | refermer la tâche ouverte |
 
 ## 9. Limites actuelles (v0.1)

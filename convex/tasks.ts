@@ -1,5 +1,6 @@
 import { ConvexError, v } from "convex/values";
 import { internalMutation, internalQuery, mutation, query, type MutationCtx } from "./_generated/server";
+import { paginationOptsValidator } from "convex/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { vPriority, vRecurrence } from "./schema";
@@ -52,7 +53,7 @@ export async function syncReminder(ctx: MutationCtx, taskId: Id<"tasks">) {
   if (!task.completed && task.remindAt !== undefined && task.remindAt > now - 60_000) {
     reminderJobId = await ctx.scheduler.runAt(Math.max(task.remindAt, now), internal.notify.fireReminder, { taskId });
   }
-  await ctx.db.patch(taskId, { reminderJobId, reminderSentAt: undefined });
+  await ctx.db.patch(taskId, { reminderJobId, reminderSentAt: undefined, reminderError: undefined });
 }
 
 export async function insertTask(
@@ -116,15 +117,18 @@ async function upsertContact(ctx: MutationCtx, userId: Id<"users">, name: string
   return { name, phone };
 }
 
-/** Programme la prochaine relance (annule la précédente). */
-export async function scheduleFollowUp(ctx: MutationCtx, taskId: Id<"tasks">, at: number | null) {
+/**
+ * Programme la prochaine notification de relance (annule la précédente).
+ * `keepDue` : simple rappel d'une relance déjà due, sans changer sa date d'échéance.
+ */
+export async function scheduleFollowUp(ctx: MutationCtx, taskId: Id<"tasks">, at: number | null, opts: { keepDue?: boolean } = {}) {
   const task = await ctx.db.get(taskId);
   if (!task) return;
   await cancelJob(ctx, task.followUpJobId);
   let followUpJobId: Id<"_scheduled_functions"> | undefined;
   if (at !== null && task.waitingFor && !task.completed) {
     followUpJobId = await ctx.scheduler.runAt(Math.max(at, Date.now()), internal.notify.fireFollowUp, { taskId });
-    await ctx.db.patch(taskId, { waitingFor: { ...task.waitingFor, nextFollowUpAt: at } });
+    if (!opts.keepDue) await ctx.db.patch(taskId, { waitingFor: { ...task.waitingFor, nextFollowUpAt: at } });
   }
   await ctx.db.patch(taskId, { followUpJobId });
 }
@@ -161,7 +165,7 @@ async function startWaiting(
   await scheduleFollowUp(ctx, taskId, at);
 }
 
-/** La relance vient d'être envoyée : on la compte et on reprogramme la suivante. */
+/** « J'ai relancé » : on compte la relance et on programme la suivante. */
 async function recordNudge(ctx: MutationCtx, task: Doc<"tasks">) {
   if (!task.waitingFor) return;
   const prefs = await getPrefs(ctx, task.userId);
@@ -212,6 +216,15 @@ export const markSeen = mutation({
   },
 });
 
+export const delayFollowUp = mutation({
+  args: { id: v.id("tasks"), days: v.number() },
+  handler: async (ctx, { id, days }) => {
+    const userId = await requireUser(ctx);
+    if (![1, 2, 7].includes(days)) throw new ConvexError("Délai invalide");
+    await postponeFollowUp(ctx, await ownTask(ctx, userId, id), days);
+  },
+});
+
 export const nudged = mutation({
   args: { id: v.id("tasks") },
   handler: async (ctx, { id }) => {
@@ -232,15 +245,29 @@ export const contacts = query({
   },
 });
 
-export const followUpSent = internalMutation({
+export const prepareFollowUp = internalMutation({
   args: { taskId: v.id("tasks"), actionToken: v.string() },
   handler: async (ctx, { taskId, actionToken }) => {
     const task = await ctx.db.get(taskId);
+    if (task?.waitingFor && !task.completed) await ctx.db.patch(taskId, { actionToken });
+  },
+});
+
+/**
+ * Notification « à relancer » partie (ou non). La relance reste due — la personne reste dans
+ * la liste « à relancer » — jusqu'à « J'ai relancé », « Reçu » ou « Reporter ». Sans action,
+ * on le rappelle le lendemain à 9h ; un échec d'envoi temporaire est réessayé dans 10 min.
+ */
+export const followUpNotified = internalMutation({
+  args: { taskId: v.id("tasks"), delivered: v.boolean(), retry: v.boolean() },
+  handler: async (ctx, { taskId, delivered, retry }) => {
+    const task = await ctx.db.get(taskId);
     if (!task?.waitingFor || task.completed) return;
     const prefs = await getPrefs(ctx, task.userId);
-    await ctx.db.patch(taskId, { actionToken });
-    // Sans réponse, on relancera de nouveau au même rythme.
-    await scheduleFollowUp(ctx, taskId, dayAt(Date.now(), task.waitingFor.everyDays, FOLLOW_UP_TIME, prefs.timezone));
+    const now = Date.now();
+    if (delivered) await ctx.db.patch(taskId, { waitingFor: { ...task.waitingFor, lastNotifiedAt: now } });
+    const at = !delivered && retry ? now + 10 * 60_000 : dayAt(now, 1, FOLLOW_UP_TIME, prefs.timezone);
+    await scheduleFollowUp(ctx, taskId, at, { keepDue: true });
   },
 });
 
@@ -256,7 +283,7 @@ export const list = query({
       .collect();
     const done = await ctx.db
       .query("tasks")
-      .withIndex("by_user_completed", (q) => q.eq("userId", userId).eq("completed", true))
+      .withIndex("by_user_completed_at", (q) => q.eq("userId", userId).eq("completed", true))
       .order("desc")
       .take(300);
     return [...open, ...done].map(
@@ -364,7 +391,8 @@ async function setCompleted(ctx: MutationCtx, task: Doc<"tasks">, completed: boo
   const now = Date.now();
   const patch: Partial<Doc<"tasks">> = { completed, completedAt: completed ? now : undefined, updatedAt: now };
 
-  if (completed && task.recurrence && task.dueAt !== undefined && !task.nextTaskId) {
+  const existingNext = task.nextTaskId ? await ctx.db.get(task.nextTaskId) : null;
+  if (completed && task.recurrence && task.dueAt !== undefined && !existingNext) {
     // Occurrence suivante, avec le même délai de rappel et une note aux cases décochées.
     const prefs = await getPrefs(ctx, task.userId);
     const dueAt = nextDue(task.dueAt, task.recurrence, prefs.timezone, now);
@@ -390,12 +418,16 @@ async function setCompleted(ctx: MutationCtx, task: Doc<"tasks">, completed: boo
 
   if (!completed && task.nextTaskId) {
     // Tâche rouverte par erreur : on retire l'occurrence suivante si elle n'a pas été touchée.
-    const next = await ctx.db.get(task.nextTaskId);
-    if (next && !next.completed && next.spawnedAt !== undefined && next.updatedAt === next.spawnedAt) {
+    // Si elle a été modifiée, on la garde ET on garde le lien : la terminer à nouveau
+    // ne créera pas de doublon.
+    const next = existingNext;
+    if (!next) patch.nextTaskId = undefined;
+    else if (!next.completed && next.spawnedAt !== undefined && next.updatedAt === next.spawnedAt) {
       await cancelJob(ctx, next.reminderJobId);
+      await cancelJob(ctx, next.followUpJobId);
       await ctx.db.delete(next._id);
+      patch.nextTaskId = undefined;
     }
-    patch.nextTaskId = undefined;
   }
 
   if (completed) await cancelJob(ctx, task.followUpJobId);
@@ -447,10 +479,14 @@ export const postpone = mutation({
     const prefs = await getPrefs(ctx, userId);
     const time = task.dueAt !== undefined ? localTime(task.dueAt, prefs.timezone) : "09:00";
     const dueAt = dayAt(Date.now(), n, time, prefs.timezone);
+    // Même écart de rappel ; « Pas de rappel » reste « Pas de rappel ».
+    // Seule une tâche qui n'avait pas d'échéance reçoit le rappel par défaut.
     const remindAt =
-      task.remindAt !== undefined && task.dueAt !== undefined
-        ? dueAt - (task.dueAt - task.remindAt)
-        : dueAt - prefs.defaultReminderOffsetMinutes * 60_000;
+      task.dueAt === undefined
+        ? dueAt - prefs.defaultReminderOffsetMinutes * 60_000
+        : task.remindAt !== undefined
+          ? dueAt - (task.dueAt - task.remindAt)
+          : undefined;
     await ctx.db.patch(id, { dueAt, remindAt, updatedAt: Date.now() });
     await syncReminder(ctx, id);
     return { dueAt: task.dueAt ?? null, remindAt: task.remindAt ?? null };
@@ -473,12 +509,80 @@ export const getInternal = internalQuery({
   handler: async (ctx, { taskId }) => ctx.db.get(taskId),
 });
 
-export const markReminderSent = internalMutation({
+export const prepareReminder = internalMutation({
   args: { taskId: v.id("tasks"), actionToken: v.string() },
   handler: async (ctx, { taskId, actionToken }) => {
+    if (await ctx.db.get(taskId)) await ctx.db.patch(taskId, { actionToken });
+  },
+});
+
+const RETRY_MINUTES = [2, 10, 30];
+
+/**
+ * Résultat d'un rappel, enregistré APRÈS la tentative d'envoi :
+ * réussi si au moins un canal l'a accepté ; sinon nouvel essai (erreur temporaire) ou échec affiché.
+ */
+export const reminderResult = internalMutation({
+  args: { taskId: v.id("tasks"), delivered: v.boolean(), hasChannel: v.boolean(), transient: v.boolean(), attempt: v.number() },
+  handler: async (ctx, { taskId, delivered, hasChannel, transient, attempt }) => {
     const task = await ctx.db.get(taskId);
-    if (!task) return;
-    await ctx.db.patch(taskId, { reminderSentAt: Date.now(), reminderJobId: undefined, actionToken });
+    if (!task || task.completed) return;
+    if (delivered) {
+      await ctx.db.patch(taskId, { reminderSentAt: Date.now(), reminderError: undefined, reminderJobId: undefined });
+    } else if (hasChannel && transient && attempt < RETRY_MINUTES.length) {
+      const reminderJobId = await ctx.scheduler.runAfter(RETRY_MINUTES[attempt] * 60_000, internal.notify.fireReminder, {
+        taskId,
+        attempt: attempt + 1,
+      });
+      await ctx.db.patch(taskId, { reminderJobId, reminderError: "Envoi en échec, nouvel essai en cours" });
+    } else {
+      await ctx.db.patch(taskId, {
+        reminderJobId: undefined,
+        reminderError: hasChannel ? "Rappel non délivré" : "Rappel non délivré : aucun appareil ni Telegram activé",
+      });
+    }
+  },
+});
+
+// ─── Historique complet (au-delà des 300 dernières tâches terminées) ───────
+
+const strip = <T extends Doc<"tasks">>({ reminderJobId: _j, actionToken: _t, nextTaskId: _n, spawnedAt: _s, followUpJobId: _f, ...rest }: T) => rest;
+
+export const listDone = query({
+  args: { paginationOpts: paginationOptsValidator },
+  handler: async (ctx, { paginationOpts }) => {
+    const userId = await requireUser(ctx);
+    const page = await ctx.db
+      .query("tasks")
+      .withIndex("by_user_completed_at", (q) => q.eq("userId", userId).eq("completed", true))
+      .order("desc")
+      .paginate(paginationOpts);
+    return { ...page, page: page.page.map(strip) };
+  },
+});
+
+export const searchDone = query({
+  args: { q: v.string() },
+  handler: async (ctx, { q }) => {
+    const userId = await requireUser(ctx);
+    const term = q.trim().slice(0, 100);
+    if (term.length < 2) return [];
+    const [byTitle, byNote] = await Promise.all(
+      (["search_title", "search_note"] as const).map((index) =>
+        ctx.db
+          .query("tasks")
+          .withSearchIndex(index, (s) =>
+            (index === "search_title" ? s.search("title", term) : s.search("noteText", term)).eq("userId", userId).eq("completed", true),
+          )
+          .take(50),
+      ),
+    );
+    const seen = new Set<string>();
+    return [...byTitle, ...byNote]
+      .filter((t) => (seen.has(t._id) ? false : (seen.add(t._id), true)))
+      .sort((a, b) => (b.completedAt ?? 0) - (a.completedAt ?? 0))
+      .slice(0, 60)
+      .map(strip);
   },
 });
 

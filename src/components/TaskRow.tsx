@@ -307,6 +307,7 @@ function TaskDetail({
         <span className="tabular">
           Créée le {new Date(task._creationTime).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
           {task.reminderSentAt ? " · rappel envoyé" : ""}
+          {task.reminderError && <span className="font-medium text-alert"> · {task.reminderError}</span>}
         </span>
         <span className="flex items-center gap-1">
         {!task.completed && (

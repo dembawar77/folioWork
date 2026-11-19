@@ -27,7 +27,14 @@ type Targets = {
   subscriptions: { endpoint: string; keys: { p256dh: string; auth: string } }[];
   telegramChatId: string | null;
 };
-type DeliveryResult = { pushed: number; devices: number; telegramSent: boolean };
+type DeliveryResult = {
+  pushed: number;
+  devices: number;
+  telegramSent: boolean;
+  telegramLinked: boolean;
+  /** Au moins un échec susceptible de passer en réessayant (réseau, 5xx, 429, Telegram). */
+  transient: boolean;
+};
 
 function configureVapid(): boolean {
   const pub = process.env.VAPID_PUBLIC_KEY;
@@ -49,6 +56,7 @@ async function deliver(
 ): Promise<DeliveryResult> {
   const targets: Targets = await ctx.runQuery(internal.push.targetsForUser, { userId });
   let pushed = 0;
+  let transient = false;
   if (targets.subscriptions.length && configureVapid()) {
     await Promise.all(
       targets.subscriptions.map(async (sub) => {
@@ -59,7 +67,9 @@ async function deliver(
           if (err?.statusCode === 404 || err?.statusCode === 410) {
             await ctx.runMutation(internal.push.removeDeadSubscription, { endpoint: sub.endpoint });
           } else {
-            console.error("Échec de l'envoi push", err?.statusCode, err?.body ?? err?.message);
+            const code = err?.statusCode as number | undefined;
+            if (code === undefined || code >= 500 || code === 429) transient = true;
+            console.error("Échec de l'envoi push", code, err?.body ?? err?.message);
           }
         }
       }),
@@ -68,24 +78,26 @@ async function deliver(
   let telegramSent = false;
   if (telegram && targets.telegramChatId) {
     telegramSent = !!(await sendMessage(targets.telegramChatId, telegram.html, telegram.buttons));
+    if (!telegramSent) transient = true;
   }
-  return { pushed, devices: targets.subscriptions.length, telegramSent };
+  return { pushed, devices: targets.subscriptions.length, telegramSent, telegramLinked: !!targets.telegramChatId, transient };
 }
 
 export const fireReminder = internalAction({
-  args: { taskId: v.id("tasks") },
-  handler: async (ctx, { taskId }) => {
+  args: { taskId: v.id("tasks"), attempt: v.optional(v.number()) },
+  handler: async (ctx, { taskId, attempt = 0 }) => {
     const task = await ctx.runQuery(internal.tasks.getInternal, { taskId });
     if (!task || task.completed) return;
     const prefs = await ctx.runQuery(internal.preferences.internalGet, { userId: task.userId });
     const actionToken = randomBytes(18).toString("base64url");
-    await ctx.runMutation(internal.tasks.markReminderSent, { taskId, actionToken });
+    // Le jeton des boutons doit exister avant l'envoi ; l'état « envoyé » n'est écrit qu'après.
+    await ctx.runMutation(internal.tasks.prepareReminder, { taskId, actionToken });
 
     const when = task.dueAt ? formatDue(task.dueAt, prefs.timezone) : "maintenant";
     const preview = task.noteText?.trim().slice(0, 120);
     const meta = [task.workstream, task.priority !== "normal" ? PRIORITY_LABEL[task.priority] : null].filter(Boolean).join(" · ");
 
-    await deliver(
+    const result = await deliver(
       ctx,
       task.userId,
       {
@@ -105,6 +117,13 @@ export const fireReminder = internalAction({
         buttons: reminderButtons(taskId),
       },
     );
+    await ctx.runMutation(internal.tasks.reminderResult, {
+      taskId,
+      delivered: result.pushed > 0 || result.telegramSent,
+      hasChannel: result.devices > 0 || result.telegramLinked,
+      transient: result.transient,
+      attempt,
+    });
   },
 });
 
@@ -115,14 +134,14 @@ export const fireFollowUp = internalAction({
     if (!task || task.completed || !task.waitingFor) return;
     const prefs = await ctx.runQuery(internal.preferences.internalGet, { userId: task.userId });
     const actionToken = randomBytes(18).toString("base64url");
-    await ctx.runMutation(internal.tasks.followUpSent, { taskId, actionToken });
+    await ctx.runMutation(internal.tasks.prepareFollowUp, { taskId, actionToken });
 
     const w = task.waitingFor;
     const days = Math.max(1, Math.round((Date.now() - w.since) / 86_400_000));
     const since = `En attente depuis ${days} jour${days > 1 ? "s" : ""}${w.nudges ? ` · ${w.nudges} relance${w.nudges > 1 ? "s" : ""}` : ""}`;
     const wa = whatsappLink(w.phone, followUpMessage(w.name, task.title, task.dueAt, prefs.timezone));
 
-    await deliver(
+    const result = await deliver(
       ctx,
       task.userId,
       {
@@ -141,12 +160,19 @@ export const fireFollowUp = internalAction({
         buttons: [
           [{ text: "Relancer sur WhatsApp", url: wa }],
           [
+            { text: "J'ai relancé", callback_data: `rel:${taskId}` },
             { text: "Reçu", callback_data: `rcv:${taskId}` },
             { text: "Dans 2 jours", callback_data: `pp2:${taskId}` },
           ],
         ],
       },
     );
+    const delivered = result.pushed > 0 || result.telegramSent;
+    await ctx.runMutation(internal.tasks.followUpNotified, {
+      taskId,
+      delivered,
+      retry: !delivered && result.transient && (result.devices > 0 || result.telegramLinked),
+    });
   },
 });
 

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
-import { Hourglass, MessageCircle, Check, Pencil } from "lucide-react";
+import { Hourglass, MessageCircle, Check, Pencil, CalendarClock } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { followUpMessage, formatPhone, normalizePhone, whatsappLink } from "../../convex/lib/whatsapp";
@@ -33,15 +33,20 @@ export function WaitingSection({ task }: { task: Task }) {
 
 function WaitingStatus({ task, onEdit }: { task: Task; onEdit: () => void }) {
   const w = task.waitingFor!;
+  const id = task._id as Id<"tasks">;
   const nudged = useMutation(api.tasks.nudged);
   const received = useMutation(api.tasks.received);
+  const delay = useMutation(api.tasks.delayFollowUp);
+  const [confirming, setConfirming] = useState(false);
+  const [delaying, setDelaying] = useState(false);
   const tz = userTimeZone();
   const days = Math.floor((Date.now() - w.since) / 86_400_000);
   const due = w.nextFollowUpAt <= Date.now();
   const link = whatsappLink(w.phone, followUpMessage(w.name, task.title, task.dueAt, tz));
+  const first = w.name.split(/\s+/)[0];
 
   return (
-    <div className="mt-4 border border-line bg-canvas p-3">
+    <div className={`mt-4 border bg-canvas p-3 ${due ? "border-soon" : "border-line"}`}>
       <p className="eyebrow mb-2 flex items-center gap-1.5 text-ink-2">
         <Hourglass className="size-3" aria-hidden /> En attente
       </p>
@@ -54,32 +59,88 @@ function WaitingStatus({ task, onEdit }: { task: Task; onEdit: () => void }) {
         </span>
       </p>
       <p className={`mt-0.5 text-[13px] ${due ? "font-medium text-soon" : "text-ink-2"}`}>
-        {due ? "À relancer maintenant" : `Prochaine relance ${formatDueLong(w.nextFollowUpAt).toLowerCase()}`}
-        {` · tous les ${w.everyDays} jour${w.everyDays > 1 ? "s" : ""}`}
+        {due ? "À relancer : reste dans la liste tant que vous n'avez pas agi" : `Prochaine relance ${formatDueLong(w.nextFollowUpAt).toLowerCase()}`}
+        {!due && ` · tous les ${w.everyDays} jour${w.everyDays > 1 ? "s" : ""}`}
       </p>
       <p className="mt-0.5 text-xs text-ink-2">{w.phone ? formatPhone(w.phone) : "Sans numéro : WhatsApp vous demandera le destinataire."}</p>
 
-      <div className="mt-3 flex flex-wrap gap-2">
-        <a
-          href={link}
-          target="_blank"
-          rel="noreferrer"
-          onClick={() => void nudged({ id: task._id as Id<"tasks"> })}
-          className="inline-flex h-10 items-center gap-2 rounded-full bg-accent px-5 text-sm font-medium text-white transition-opacity duration-200 ease-brand hover:opacity-[.86]"
-        >
-          <MessageCircle className="size-4" aria-hidden /> Relancer sur WhatsApp
-        </a>
-        <button
-          type="button"
-          onClick={() => void received({ id: task._id as Id<"tasks"> })}
-          className="inline-flex h-10 items-center gap-2 rounded-full border border-line px-5 text-sm font-medium hover:border-ink"
-        >
-          <Check className="size-4" aria-hidden /> Reçu
-        </button>
-        <button type="button" onClick={onEdit} className="inline-flex h-10 items-center gap-2 rounded-full px-4 text-sm text-ink-2 hover:bg-hover hover:text-ink">
-          <Pencil className="size-3.5" aria-hidden /> Modifier
-        </button>
-      </div>
+      {confirming ? (
+        <div className="animate-reveal mt-3 border-t border-line pt-3">
+          <p className="text-sm text-ink">Message envoyé à {first} ?</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                void nudged({ id });
+                setConfirming(false);
+              }}
+              className="inline-flex h-10 items-center gap-2 rounded-full bg-accent px-5 text-sm font-medium text-white"
+            >
+              <Check className="size-4" aria-hidden /> Oui, j'ai relancé
+            </button>
+            <button type="button" onClick={() => setConfirming(false)} className="h-10 rounded-full px-4 text-sm text-ink-2 hover:bg-hover hover:text-ink">
+              Pas encore
+            </button>
+          </div>
+        </div>
+      ) : delaying ? (
+        <div className="animate-reveal mt-3 flex flex-wrap items-center gap-2 border-t border-line pt-3">
+          <span className="text-sm text-ink-2">Relancer</span>
+          {[
+            { d: 1, l: "demain" },
+            { d: 2, l: "dans 2 jours" },
+            { d: 7, l: "dans 1 semaine" },
+          ].map((o) => (
+            <button
+              key={o.d}
+              type="button"
+              onClick={() => {
+                void delay({ id, days: o.d });
+                setDelaying(false);
+              }}
+              className="h-9 rounded-full border border-line px-4 text-sm hover:border-accent hover:text-accent"
+            >
+              {o.l}
+            </button>
+          ))}
+          <button type="button" onClick={() => setDelaying(false)} className="h-9 rounded-full px-3 text-sm text-ink-2 hover:bg-hover">
+            Annuler
+          </button>
+        </div>
+      ) : (
+        <div className="mt-3 flex flex-wrap gap-2">
+          <a
+            href={link}
+            target="_blank"
+            rel="noreferrer"
+            onClick={() => setConfirming(true)}
+            className="inline-flex h-10 items-center gap-2 rounded-full bg-accent px-5 text-sm font-medium text-white transition-opacity duration-200 ease-brand hover:opacity-90"
+          >
+            <MessageCircle className="size-4" aria-hidden /> Relancer sur WhatsApp
+          </a>
+          <button
+            type="button"
+            onClick={() => void nudged({ id })}
+            title="Relancé par téléphone, e-mail ou de vive voix"
+            className="inline-flex h-10 items-center gap-2 rounded-full border border-line px-4 text-sm font-medium hover:border-ink"
+          >
+            J'ai relancé
+          </button>
+          <button
+            type="button"
+            onClick={() => void received({ id })}
+            className="inline-flex h-10 items-center gap-2 rounded-full border border-line px-4 text-sm font-medium hover:border-ink"
+          >
+            <Check className="size-4" aria-hidden /> Reçu
+          </button>
+          <button type="button" onClick={() => setDelaying(true)} className="inline-flex h-10 items-center gap-2 rounded-full px-4 text-sm text-ink-2 hover:bg-hover hover:text-ink">
+            <CalendarClock className="size-3.5" aria-hidden /> Reporter
+          </button>
+          <button type="button" onClick={onEdit} className="inline-flex h-10 items-center gap-2 rounded-full px-4 text-sm text-ink-2 hover:bg-hover hover:text-ink">
+            <Pencil className="size-3.5" aria-hidden /> Modifier
+          </button>
+        </div>
+      )}
     </div>
   );
 }

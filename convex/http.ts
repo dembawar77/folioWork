@@ -72,6 +72,7 @@ http.route({
           done: { action: "done", reply: "Terminée" },
           snz: { action: "snooze", reply: "Rappel dans 15 min" },
           rcv: { action: "received", reply: "Retour reçu" },
+          rel: { action: "nudge", reply: "Relance enregistrée" },
           pp2: { action: "postpone", reply: "Relance dans 2 jours" },
         } as const;
         const def = ACTIONS[kind as keyof typeof ACTIONS];

@@ -9,6 +9,20 @@ import "./index.css";
 
 const url = import.meta.env.VITE_CONVEX_URL as string | undefined;
 
+// Contenu partagé depuis une autre app (WhatsApp, Gmail…) : lu tout de suite et mis de côté,
+// avant que l'app ne réécrive l'adresse — et même si une connexion est d'abord nécessaire.
+{
+  const p = new URLSearchParams(window.location.search);
+  const shared = [p.get("title"), p.get("text"), p.get("url")].filter(Boolean).join(" ").trim();
+  if (shared) {
+    try {
+      sessionStorage.setItem("fw-shared", shared.slice(0, 380));
+    } catch {
+      (window as unknown as { __fwShared?: string }).__fwShared = shared.slice(0, 380);
+    }
+  }
+}
+
 const root = createRoot(document.getElementById("root")!);
 
 if (!url) {

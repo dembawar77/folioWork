@@ -21,6 +21,8 @@ export const vWaitingFor = v.object({
   /** Relances envoyées depuis l'app ou une notification. */
   nudges: v.number(),
   lastNudgeAt: v.optional(v.number()),
+  /** Dernière notification « à relancer » envoyée (la relance reste due tant qu'on n'agit pas). */
+  lastNotifiedAt: v.optional(v.number()),
 });
 
 export default defineSchema({
@@ -43,7 +45,10 @@ export default defineSchema({
     remindAt: v.optional(v.number()),
     /** Fonction programmée qui enverra le rappel. */
     reminderJobId: v.optional(v.id("_scheduled_functions")),
+    /** Rappel accepté par au moins un canal (appareil ou Telegram). */
     reminderSentAt: v.optional(v.number()),
+    /** Rappel non délivré : raison affichée dans la tâche. */
+    reminderError: v.optional(v.string()),
     /** Jeton aléatoire qui autorise les boutons d'action des notifications. */
     actionToken: v.optional(v.string()),
     /** Note riche (JSON Tiptap sérialisé). */
@@ -74,7 +79,10 @@ export default defineSchema({
     updatedAt: v.number(),
   })
     .index("by_user", ["userId"])
-    .index("by_user_completed", ["userId", "completed"]),
+    .index("by_user_completed", ["userId", "completed"])
+    .index("by_user_completed_at", ["userId", "completed", "completedAt"])
+    .searchIndex("search_title", { searchField: "title", filterFields: ["userId", "completed"] })
+    .searchIndex("search_note", { searchField: "noteText", filterFields: ["userId", "completed"] }),
 
   preferences: defineTable({
     userId: v.id("users"),

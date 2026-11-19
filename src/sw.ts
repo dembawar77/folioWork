@@ -84,8 +84,9 @@ self.addEventListener("notificationclick", (event) => {
     }).catch(() => undefined);
 
   if (event.action === "nudge" && data.whatsappUrl) {
-    // Ouvre WhatsApp avec le message prêt, et compte la relance.
-    event.waitUntil(Promise.all([self.clients.openWindow(data.whatsappUrl), data.actionUrl ? report("nudge") : undefined]));
+    // Ouvre WhatsApp avec le message prêt. La relance n'est comptée qu'une fois confirmée
+    // (« J'ai relancé ») : fermer WhatsApp sans envoyer ne doit rien enregistrer.
+    event.waitUntil(self.clients.openWindow(data.whatsappUrl));
     return;
   }
   if (["done", "snooze", "received"].includes(event.action) && data.actionUrl) {

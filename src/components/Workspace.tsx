@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useQuery } from "convex/react";
+import { usePaginatedQuery, useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
@@ -100,12 +100,17 @@ export function Workspace() {
     window.history.replaceState(null, "", qs ? `/?${qs}` : "/");
   }, [view, expanded]);
 
-  // Contenu partagé depuis une autre app (WhatsApp, Gmail…).
+  // Contenu partagé depuis une autre app (mis de côté par main.tsx) : ouvre « Nouvelle tâche » pré-remplie.
   useEffect(() => {
-    const p = new URLSearchParams(window.location.search);
-    const shared = [p.get("title"), p.get("text"), p.get("url")].filter(Boolean).join(" ").trim();
+    let shared: string | null = null;
+    try {
+      shared = sessionStorage.getItem("fw-shared");
+      sessionStorage.removeItem("fw-shared");
+    } catch {
+      shared = (window as unknown as { __fwShared?: string }).__fwShared ?? null;
+    }
     if (shared) {
-      setPrefill(shared.slice(0, 380));
+      setPrefill(shared);
       setAdding(true);
     }
   }, []);
@@ -156,8 +161,19 @@ export function Workspace() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const c = useMemo(() => counts(tasks ?? []), [tasks, tick]);
   const streams = useMemo(() => workstreamsOf(tasks ?? []), [tasks]);
+  // Terminées : historique complet, paginé, et recherche côté serveur (au-delà des 300 dernières).
+  const searching = search.trim().length >= 2;
+  const donePage = usePaginatedQuery(api.tasks.listDone, view === "done" && !searching ? {} : "skip", { initialNumItems: 50 });
+  const doneSearch = useQuery(api.tasks.searchDone, view === "done" && searching ? { q: search } : "skip");
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  const visible = useMemo(() => (tasks ? filterTasks(tasks, view, { workstream, search }) : []), [tasks, view, workstream, search, tick]);
+  const visible = useMemo(() => {
+    if (view === "done") {
+      const source = (searching ? doneSearch : donePage.results) ?? [];
+      return workstream ? source.filter((t) => t.workstream === workstream) : source;
+    }
+    return tasks ? filterTasks(tasks, view, { workstream, search }) : [];
+  }, [tasks, view, workstream, search, tick, searching, doneSearch, donePage.results]);
+  const listLoading = view === "done" ? (searching ? doneSearch === undefined : donePage.status === "LoadingFirstPage") : tasks === undefined;
   const streamCounts = useMemo(() => {
     const m = new Map<string, number>();
     for (const t of tasks ?? []) if (!t.completed && t.workstream) m.set(t.workstream, (m.get(t.workstream) ?? 0) + 1);
@@ -299,7 +315,7 @@ export function Workspace() {
                     <QuickCapture ref={capture} defaultWorkstream={workstream} onCreated={(id) => view === "upcoming" && setExpanded(id)} />
                   </div>
                 )}
-                {tasks === undefined ? (
+                {listLoading ? (
                   <Skeleton />
                 ) : visible.length === 0 ? (
                   <Empty view={view} searching={!!search} onCreate={openSheet} />
@@ -332,6 +348,22 @@ export function Workspace() {
                       );
                     })}
                   </div>
+                )}
+                {view === "done" && !searching && donePage.status === "CanLoadMore" && (
+                  <button
+                    onClick={() => donePage.loadMore(100)}
+                    className="mx-auto mt-6 flex h-10 items-center rounded-full border border-line px-5 text-sm font-medium hover:border-ink"
+                  >
+                    Afficher plus
+                  </button>
+                )}
+                {view !== "done" && searching && (
+                  <button
+                    onClick={() => setView("done")}
+                    className="mx-auto mt-6 flex h-10 items-center rounded-full px-5 text-sm text-accent hover:bg-accent/8"
+                  >
+                    Chercher aussi dans les tâches terminées
+                  </button>
                 )}
               </>
             )}
