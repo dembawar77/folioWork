@@ -140,6 +140,15 @@ Le nombre de cases cochées s'affiche dans la liste (ex. `2/5`).
 
 **Résumé du matin** : **Alertes → Résumé quotidien**, choisissez l'heure. Vous recevez chaque matin les tâches du jour et celles en retard.
 
+## 5 bis. Exporter mes données
+
+**Alertes → Mes données → Exporter mes données**, puis :
+
+- **Sauvegarde complète** (`foliowork-AAAA-MM-JJ.json`) : tout le compte (tâches ouvertes et terminées, notes avec leur mise en forme, contacts, réglages, boîte de dépôt) ;
+- **Tableau Excel** (`.csv`) : une ligne par tâche (titre, statut, échéance, priorité, catégorie, répétition, personne attendue, demandeur, note…), à ouvrir dans Excel ou Google Sheets.
+
+Sur téléphone, le menu de partage s'ouvre : choisissez **Enregistrer dans Fichiers**, Drive ou votre e-mail. Sur ordinateur, le fichier part dans *Téléchargements*. Conseil : une sauvegarde par mois, rangée dans Drive. La date du dernier export s'affiche sous le bouton.
+
 ## 6. Le bot Telegram
 
 Écrivez au bot comme dans le champ de saisie :

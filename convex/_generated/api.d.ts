@@ -9,6 +9,7 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as backup from "../backup.js";
 import type * as http from "../http.js";
 import type * as intake from "../intake.js";
 import type * as lib_format from "../lib/format.js";
@@ -32,6 +33,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  backup: typeof backup;
   http: typeof http;
   intake: typeof intake;
   "lib/format": typeof lib_format;

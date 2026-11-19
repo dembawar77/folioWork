@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
-import { useMutation, useQuery } from "convex/react";
-import { Check, Send, Smartphone, Trash2, CircleAlert } from "lucide-react";
+import { useConvex, useMutation, useQuery } from "convex/react";
+import { Check, Send, Smartphone, Trash2, CircleAlert, Download, FileJson, FileSpreadsheet } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import { errorMessage } from "../lib/errors";
 import { currentSubscription, isIos, pushSupport, subscribePush } from "../lib/push";
 import { userTimeZone } from "../lib/dates";
 import { InstallButton } from "./InstallButton";
 import { IntakeSection } from "./IntakeSection";
+import { backupName, collectBackup, saveFile, toCsv, toJson, type Backup } from "../lib/backup";
+import { useConnected } from "../lib/offline";
 
 const OFFSETS = [
   { value: 0, label: "À l'heure" },
@@ -22,6 +24,7 @@ export function AlertsPanel() {
       <SummarySection />
       <TelegramSection />
       <IntakeSection />
+      <BackupSection />
       <section className="py-6">
         <h2 className="text-lg">Installer l'app</h2>
         <p className="mt-1 max-w-prose text-sm text-ink-2">
@@ -272,5 +275,100 @@ function DiscreetToggle() {
         className="mt-0.5 size-5 shrink-0 accent-accent"
       />
     </label>
+  );
+}
+
+const LAST_EXPORT = "fw-last-export";
+
+function BackupSection() {
+  const convex = useConvex();
+  const connected = useConnected();
+  const [state, setState] = useState<{ kind: "idle" } | { kind: "busy"; n: number } | { kind: "ready"; data: Backup } | { kind: "error"; message: string }>({
+    kind: "idle",
+  });
+  const [last, setLast] = useState<string | null>(() => {
+    try {
+      return localStorage.getItem(LAST_EXPORT);
+    } catch {
+      return null;
+    }
+  });
+
+  async function prepare() {
+    setState({ kind: "busy", n: 0 });
+    try {
+      const data = await collectBackup(convex, (n) => setState({ kind: "busy", n }));
+      setState({ kind: "ready", data });
+    } catch (err) {
+      setState({ kind: "error", message: errorMessage(err, "Export impossible, réessayez") });
+    }
+  }
+
+  async function save(kind: "json" | "csv", data: Backup) {
+    await saveFile(kind === "json" ? toJson(data) : toCsv(data), backupName(kind));
+    const when = new Date().toISOString();
+    setLast(when);
+    try {
+      localStorage.setItem(LAST_EXPORT, when);
+    } catch {
+      /* rien */
+    }
+  }
+
+  const lastLabel = last ? new Date(last).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : null;
+
+  return (
+    <section className="py-6">
+      <h2 className="text-lg">Mes données</h2>
+      <p className="mt-1 max-w-prose text-sm text-ink-2">
+        Une copie de tout votre compte sur votre appareil : tâches ouvertes et terminées, notes, contacts, réglages.
+        À faire de temps en temps et à garder dans Drive ou par e-mail.
+      </p>
+      {lastLabel && <p className="mt-1 text-xs text-ink-3">Dernier export sur cet appareil : {lastLabel}</p>}
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        {state.kind !== "ready" ? (
+          <button
+            onClick={() => void prepare()}
+            disabled={state.kind === "busy" || !connected}
+            className="inline-flex h-10 items-center gap-2 rounded-full bg-ink px-5 text-sm font-medium text-white transition-opacity duration-200 hover:opacity-90 disabled:opacity-40"
+          >
+            <Download className="size-4" aria-hidden />
+            {state.kind === "busy" ? `Préparation… ${state.n || ""}` : "Exporter mes données"}
+          </button>
+        ) : (
+          <>
+            <p className="w-full text-sm" aria-live="polite">
+              <Check className="mr-1 inline size-4 text-accent" aria-hidden />
+              Prêt : {state.data.tasks.length} tâche{state.data.tasks.length > 1 ? "s" : ""}, {state.data.contacts.length} contact
+              {state.data.contacts.length > 1 ? "s" : ""}.
+            </p>
+            <button
+              onClick={() => void save("json", state.data)}
+              className="inline-flex h-10 items-center gap-2 rounded-full bg-accent px-5 text-sm font-medium text-white transition-opacity duration-200 hover:opacity-90"
+            >
+              <FileJson className="size-4" aria-hidden /> Sauvegarde complète
+            </button>
+            <button
+              onClick={() => void save("csv", state.data)}
+              className="inline-flex h-10 items-center gap-2 rounded-full border border-line px-5 text-sm font-medium hover:border-ink"
+            >
+              <FileSpreadsheet className="size-4" aria-hidden /> Tableau Excel
+            </button>
+          </>
+        )}
+      </div>
+      {state.kind === "ready" && (
+        <p className="mt-2 max-w-prose text-xs text-ink-3">
+          La sauvegarde complète (.json) contient tout, notes mises en forme comprises. Le tableau (.csv) s'ouvre dans Excel ou Google Sheets.
+        </p>
+      )}
+      {!connected && state.kind !== "ready" && <p className="mt-2 text-xs text-ink-2">Disponible avec le réseau.</p>}
+      {state.kind === "error" && (
+        <p role="alert" className="mt-2 text-sm font-medium text-alert">
+          {state.message}
+        </p>
+      )}
+    </section>
   );
 }
