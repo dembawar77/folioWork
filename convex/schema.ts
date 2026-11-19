@@ -49,8 +49,11 @@ export default defineSchema({
     reminderSentAt: v.optional(v.number()),
     /** Rappel non délivré : raison affichée dans la tâche. */
     reminderError: v.optional(v.string()),
-    /** Jeton aléatoire qui autorise les boutons d'action des notifications. */
+    /** Jeton aléatoire qui autorise les boutons de LA dernière notification : usage unique, durée courte. */
     actionToken: v.optional(v.string()),
+    actionTokenExpiresAt: v.optional(v.number()),
+    /** Boutons autorisés : rappel (Terminé, +15 min) ou relance (Reçu). */
+    actionKind: v.optional(v.union(v.literal("reminder"), v.literal("followup"))),
     /** Note riche (JSON Tiptap sérialisé). */
     note: v.optional(v.string()),
     /** Texte brut de la note, pour la recherche et les aperçus. */
@@ -91,6 +94,9 @@ export default defineSchema({
     dailySummaryTime: v.string(),
     defaultReminderOffsetMinutes: v.number(),
     summaryJobId: v.optional(v.id("_scheduled_functions")),
+    /** Notifications discrètes : ni titre ni note sur l'écran de l'appareil. */
+    discreetNotifications: v.optional(v.boolean()),
+    lastTestPushAt: v.optional(v.number()),
   }).index("by_user", ["userId"]),
 
   /** Carnet de contacts pour les relances (nom → numéro WhatsApp). */
@@ -110,6 +116,9 @@ export default defineSchema({
   })
     .index("by_slug", ["slug"])
     .index("by_user", ["userId"]),
+
+  /** Anciennes adresses de boîte de dépôt : réservées à vie à leur propriétaire. */
+  intakeAliases: defineTable({ slug: v.string(), userId: v.id("users"), retiredAt: v.number() }).index("by_slug", ["slug"]),
 
   /** Journal minimal des envois, pour limiter les abus. */
   intakeHits: defineTable({ slug: v.string(), at: v.number() }).index("by_slug_at", ["slug", "at"]),

@@ -1,5 +1,6 @@
 import { ConvexError, v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, type QueryCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { requireUser } from "./users";
 import { getPrefs } from "./preferences";
@@ -47,15 +48,23 @@ export const save = mutation({
     const clean = slug.trim().toLowerCase();
     if (!SLUG.test(clean)) throw new ConvexError("Adresse invalide : 3 à 30 caractères, lettres sans accent, chiffres et tirets");
     if (RESERVED.has(clean)) throw new ConvexError("Cette adresse est réservée, choisissez-en une autre");
-    const taken = await ctx.db
-      .query("intakes")
-      .withIndex("by_slug", (q) => q.eq("slug", clean))
-      .unique();
-    if (taken && taken.userId !== userId) throw new ConvexError("Cette adresse est déjà prise");
+    const owner = await slugOwner(ctx, clean);
+    if (owner && owner !== userId) throw new ConvexError("Cette adresse est déjà prise");
     const existing = await ctx.db
       .query("intakes")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .unique();
+    // L'ancienne adresse reste réservée à son propriétaire, pour toujours : un lien déjà
+    // envoyé ne pourra jamais mener chez quelqu'un d'autre.
+    if (existing && existing.slug !== clean) {
+      await ctx.db.insert("intakeAliases", { slug: existing.slug, userId, retiredAt: Date.now() });
+    }
+    // Reprendre une de ses anciennes adresses : elle redevient active.
+    const alias = await ctx.db
+      .query("intakeAliases")
+      .withIndex("by_slug", (q) => q.eq("slug", clean))
+      .first();
+    if (alias?.userId === userId) await ctx.db.delete(alias._id);
     const doc = { slug: clean, enabled, intro: intro?.trim().slice(0, 300) || undefined };
     if (existing) await ctx.db.patch(existing._id, doc);
     else await ctx.db.insert("intakes", { userId, ...doc });
@@ -64,16 +73,46 @@ export const save = mutation({
 
 // ─── Page publique ─────────────────────────────────────────────────────────
 
+/** Propriétaire d'une adresse, active ou ancienne. */
+async function slugOwner(ctx: QueryCtx, slug: string): Promise<Id<"users"> | null> {
+  const active = await ctx.db
+    .query("intakes")
+    .withIndex("by_slug", (q) => q.eq("slug", slug))
+    .unique();
+  if (active) return active.userId;
+  const alias = await ctx.db
+    .query("intakeAliases")
+    .withIndex("by_slug", (q) => q.eq("slug", slug))
+    .first();
+  return alias?.userId ?? null;
+}
+
 export const publicInfo = query({
   args: { slug: v.string() },
   handler: async (ctx, { slug }) => {
+    const s = slug.toLowerCase();
     const intake = await ctx.db
       .query("intakes")
-      .withIndex("by_slug", (q) => q.eq("slug", slug.toLowerCase()))
+      .withIndex("by_slug", (q) => q.eq("slug", s))
       .unique();
-    if (!intake?.enabled) return null;
-    const owner = await ctx.db.get(intake.userId);
-    return { firstName: firstName(owner?.name), intro: intake.intro ?? null };
+    if (intake) {
+      if (!intake.enabled) return { status: "inactive" as const };
+      const owner = await ctx.db.get(intake.userId);
+      return { status: "active" as const, firstName: firstName(owner?.name), intro: intake.intro ?? null };
+    }
+    const alias = await ctx.db
+      .query("intakeAliases")
+      .withIndex("by_slug", (q) => q.eq("slug", s))
+      .first();
+    if (alias) {
+      // Ancienne adresse : on indique la nouvelle, sans rien révéler d'autre.
+      const current = await ctx.db
+        .query("intakes")
+        .withIndex("by_user", (q) => q.eq("userId", alias.userId))
+        .unique();
+      return { status: "moved" as const, newSlug: current?.enabled ? current.slug : null };
+    }
+    return { status: "inactive" as const };
   },
 });
 

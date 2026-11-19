@@ -249,7 +249,7 @@ export const prepareFollowUp = internalMutation({
   args: { taskId: v.id("tasks"), actionToken: v.string() },
   handler: async (ctx, { taskId, actionToken }) => {
     const task = await ctx.db.get(taskId);
-    if (task?.waitingFor && !task.completed) await ctx.db.patch(taskId, { actionToken });
+    if (task?.waitingFor && !task.completed) await ctx.db.patch(taskId, issueToken(actionToken, "followup"));
   },
 });
 
@@ -286,9 +286,7 @@ export const list = query({
       .withIndex("by_user_completed_at", (q) => q.eq("userId", userId).eq("completed", true))
       .order("desc")
       .take(300);
-    return [...open, ...done].map(
-      ({ reminderJobId: _j, actionToken: _t, nextTaskId: _n, spawnedAt: _s, followUpJobId: _f, ...rest }) => rest,
-    );
+    return [...open, ...done].map(strip);
   },
 });
 
@@ -509,10 +507,29 @@ export const getInternal = internalQuery({
   handler: async (ctx, { taskId }) => ctx.db.get(taskId),
 });
 
+/** Les boutons d'une notification restent utilisables 12 h (durée de vie de la notification push). */
+const ACTION_TOKEN_TTL = 12 * 3_600_000;
+const ACTIONS_BY_KIND = { reminder: ["done", "snooze"], followup: ["received", "postpone", "nudge"] } as const;
+
+function issueToken(actionToken: string, actionKind: "reminder" | "followup") {
+  return { actionToken, actionKind, actionTokenExpiresAt: Date.now() + ACTION_TOKEN_TTL };
+}
+
+/** Invalide les boutons de toutes les notifications déjà envoyées (appareil retiré, déconnexion). */
+export async function revokeActionTokens(ctx: MutationCtx, userId: Id<"users">) {
+  const tasks = await ctx.db
+    .query("tasks")
+    .withIndex("by_user", (q) => q.eq("userId", userId))
+    .collect();
+  for (const t of tasks) {
+    if (t.actionToken) await ctx.db.patch(t._id, { actionToken: undefined, actionTokenExpiresAt: undefined, actionKind: undefined });
+  }
+}
+
 export const prepareReminder = internalMutation({
   args: { taskId: v.id("tasks"), actionToken: v.string() },
   handler: async (ctx, { taskId, actionToken }) => {
-    if (await ctx.db.get(taskId)) await ctx.db.patch(taskId, { actionToken });
+    if (await ctx.db.get(taskId)) await ctx.db.patch(taskId, issueToken(actionToken, "reminder"));
   },
 });
 
@@ -546,7 +563,16 @@ export const reminderResult = internalMutation({
 
 // ─── Historique complet (au-delà des 300 dernières tâches terminées) ───────
 
-const strip = <T extends Doc<"tasks">>({ reminderJobId: _j, actionToken: _t, nextTaskId: _n, spawnedAt: _s, followUpJobId: _f, ...rest }: T) => rest;
+const strip = <T extends Doc<"tasks">>({
+  reminderJobId: _j,
+  actionToken: _t,
+  actionTokenExpiresAt: _e,
+  actionKind: _k,
+  nextTaskId: _n,
+  spawnedAt: _s,
+  followUpJobId: _f,
+  ...rest
+}: T) => rest;
 
 export const listDone = query({
   args: { paginationOpts: paginationOptsValidator },
@@ -609,8 +635,12 @@ export const actByToken = internalMutation({
   handler: async (ctx, { taskId, token, action }) => {
     const id = ctx.db.normalizeId("tasks", taskId);
     const task = id ? await ctx.db.get(id) : null;
-    if (!task || !task.actionToken || task.actionToken !== token) return false;
-    await applyAction(ctx, task, action);
+    if (!task?.actionToken || !task.actionKind || task.actionToken !== token) return false;
+    if ((task.actionTokenExpiresAt ?? 0) < Date.now()) return false;
+    if (!(ACTIONS_BY_KIND[task.actionKind] as readonly string[]).includes(action)) return false;
+    // Usage unique : le jeton est consommé avant d'agir.
+    await ctx.db.patch(task._id, { actionToken: undefined, actionTokenExpiresAt: undefined, actionKind: undefined });
+    await applyAction(ctx, { ...task, actionToken: undefined }, action);
     return true;
   },
 });

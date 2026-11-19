@@ -1,6 +1,6 @@
 import { ConvexError, v } from "convex/values";
 import { internalMutation, internalQuery, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
-import type { Doc, Id } from "./_generated/dataModel";
+import type { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { requireUser } from "./users";
 import { nextOccurrence } from "./lib/time";
@@ -10,9 +10,10 @@ export const DEFAULT_PREFS = {
   dailySummaryEnabled: false,
   dailySummaryTime: "08:30",
   defaultReminderOffsetMinutes: 0,
+  discreetNotifications: false,
 };
 
-export type Prefs = Omit<Doc<"preferences">, "_id" | "_creationTime" | "userId" | "summaryJobId">;
+export type Prefs = typeof DEFAULT_PREFS;
 
 export async function getPrefs(ctx: QueryCtx | MutationCtx, userId: Id<"users">): Promise<Prefs> {
   const doc = await ctx.db
@@ -21,7 +22,7 @@ export async function getPrefs(ctx: QueryCtx | MutationCtx, userId: Id<"users">)
     .unique();
   if (!doc) return DEFAULT_PREFS;
   const { timezone, dailySummaryEnabled, dailySummaryTime, defaultReminderOffsetMinutes } = doc;
-  return { timezone, dailySummaryEnabled, dailySummaryTime, defaultReminderOffsetMinutes };
+  return { timezone, dailySummaryEnabled, dailySummaryTime, defaultReminderOffsetMinutes, discreetNotifications: doc.discreetNotifications ?? false };
 }
 
 export const get = query({
@@ -49,6 +50,7 @@ export const save = mutation({
     dailySummaryEnabled: v.optional(v.boolean()),
     dailySummaryTime: v.optional(v.string()),
     defaultReminderOffsetMinutes: v.optional(v.number()),
+    discreetNotifications: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const userId = await requireUser(ctx);

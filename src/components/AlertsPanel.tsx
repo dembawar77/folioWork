@@ -71,8 +71,12 @@ function PushSection() {
 
   async function test() {
     setMsg(null);
-    await sendTest();
-    setMsg({ kind: "ok", text: "Notification de test envoyée. Elle arrive en quelques secondes." });
+    try {
+      await sendTest();
+      setMsg({ kind: "ok", text: "Notification de test envoyée. Elle arrive en quelques secondes." });
+    } catch (err) {
+      setMsg({ kind: "err", text: errorMessage(err, "Envoi du test impossible") });
+    }
   }
 
   return (
@@ -109,6 +113,8 @@ function PushSection() {
           {msg.text}
         </p>
       )}
+
+      <DiscreetToggle />
 
       {devices && devices.length > 0 && (
         <ul className="mt-4 divide-y divide-line border-y border-line text-sm">
@@ -243,5 +249,28 @@ function TelegramSection() {
         </button>
       )}
     </section>
+  );
+}
+
+function DiscreetToggle() {
+  const prefs = useQuery(api.preferences.get);
+  const save = useMutation(api.preferences.save);
+  if (!prefs) return null;
+  return (
+    <label className="mt-5 flex max-w-xl items-start justify-between gap-4 text-sm">
+      <span>
+        Notifications discrètes
+        <span className="block text-xs text-ink-2">
+          L'écran affiche seulement « Vous avez un rappel », sans titre ni note. Conseillé sur un ordinateur partagé ou un écran visible en réunion. Telegram reste complet.
+        </span>
+      </span>
+      <input
+        type="checkbox"
+        role="switch"
+        checked={prefs.discreetNotifications}
+        onChange={(e) => save({ discreetNotifications: e.target.checked })}
+        className="mt-0.5 size-5 shrink-0 accent-accent"
+      />
+    </label>
   );
 }

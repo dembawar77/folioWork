@@ -47,14 +47,21 @@ function configureVapid(): boolean {
   return true;
 }
 
-/** Envoie un message à tous les appareils de l'utilisateur, puis sur Telegram s'il est lié. */
+/**
+ * Envoie un message à tous les appareils de l'utilisateur, puis sur Telegram s'il est lié.
+ * En mode discret, l'écran de l'appareil n'affiche qu'un texte neutre (`discreet`), sans titre de tâche
+ * ni extrait de note ; la tâche s'ouvre toujours au toucher. Telegram (conversation privée) reste complet.
+ */
 async function deliver(
   ctx: ActionCtx,
   userId: Id<"users">,
-  push: PushPayload,
-  telegram?: { html: string; buttons?: Parameters<typeof sendMessage>[2] },
+  fullPush: PushPayload,
+  telegram: { html: string; buttons?: Parameters<typeof sendMessage>[2] } | undefined,
+  discreet: string,
 ): Promise<DeliveryResult> {
   const targets: Targets = await ctx.runQuery(internal.push.targetsForUser, { userId });
+  const prefs = await ctx.runQuery(internal.preferences.internalGet, { userId });
+  const push: PushPayload = prefs.discreetNotifications ? { ...fullPush, title: "FolioWork", body: discreet } : fullPush;
   let pushed = 0;
   let transient = false;
   if (targets.subscriptions.length && configureVapid()) {
@@ -116,6 +123,7 @@ export const fireReminder = internalAction({
         }`,
         buttons: reminderButtons(taskId),
       },
+      "Vous avez un rappel.",
     );
     await ctx.runMutation(internal.tasks.reminderResult, {
       taskId,
@@ -166,6 +174,7 @@ export const fireFollowUp = internalAction({
           ],
         ],
       },
+      "Une relance est à faire.",
     );
     const delivered = result.pushed > 0 || result.telegramSent;
     await ctx.runMutation(internal.tasks.followUpNotified, {
@@ -198,6 +207,7 @@ export const fireRequest = internalAction({
         }`,
         buttons: reply ? [[{ text: "Répondre sur WhatsApp", url: reply }]] : undefined,
       },
+      "Nouvelle demande reçue.",
     );
   },
 });
@@ -227,6 +237,7 @@ export const fireDailySummary = internalAction({
       userId,
       { title: `Bonjour. ${title}`, body, tag: "daily-summary", url: "/" },
       { html: `<b>${title}</b>\n\n${lines.join("\n") || "Rien de prévu aujourd'hui."}` },
+      "Votre résumé du matin est prêt.",
     );
   },
 });
@@ -239,6 +250,7 @@ export const sendTest = internalAction({
       userId,
       { title: "FolioWork fonctionne", body: "Les rappels arriveront sur cet appareil.", tag: "test", url: "/?view=alerts" },
       { html: "<b>Test FolioWork</b>\nLes rappels arriveront aussi ici." },
+      "Notification de test : tout fonctionne.",
     );
   },
 });

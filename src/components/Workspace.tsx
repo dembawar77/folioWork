@@ -9,6 +9,7 @@ import type { Id } from "../../convex/_generated/dataModel";
 import { api } from "../../convex/_generated/api";
 import { counts, filterTasks, groupOf, VIEW_LABEL, workstreamsOf, type Task, type View } from "../lib/tasks";
 import { NewTaskSheet } from "./NewTaskSheet";
+import { forgetThisDevice } from "../lib/push";
 import { QuickCapture, type QuickCaptureHandle } from "./QuickCapture";
 import { TaskRow } from "./TaskRow";
 import { AlertsPanel } from "./AlertsPanel";
@@ -42,7 +43,12 @@ export function Workspace() {
   const tasks = useQuery(api.tasks.list);
   const me = useQuery(api.users.me);
   const prefs = useQuery(api.preferences.get);
-  const { signOut } = useAuthActions();
+  const { signOut: rawSignOut } = useAuthActions();
+  const unsubscribePush = useMutation(api.push.unsubscribe);
+  const signOut = useCallback(async () => {
+    await forgetThisDevice((endpoint) => unsubscribePush({ endpoint }));
+    await rawSignOut();
+  }, [rawSignOut, unsubscribePush]);
   const online = useOnline();
   // Rafraîchit chaque minute les états qui dépendent de l'heure (en retard, « Dans 45 min »).
   const [tick, setTick] = useState(0);

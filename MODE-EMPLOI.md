@@ -108,7 +108,7 @@ Chaque demande :
 - reste en haut de **Aujourd'hui**, section bleue **Nouvelles demandes**, jusqu'à ce que vous l'ayez ouverte puis refermée ;
 - propose **Répondre sur WhatsApp** avec un accusé de réception prêt à envoyer.
 
-Protection : 8 demandes maximum par 10 minutes et 60 par jour, et un piège à robots. **Désactiver** coupe le lien immédiatement.
+Protection : 8 demandes maximum par 10 minutes et 60 par jour, et un piège à robots. **Désactiver** coupe le lien immédiatement. Si vous changez d'adresse, l'ancienne vous reste réservée à vie : un ancien lien affiche « Ce formulaire a changé d'adresse » avec un bouton vers la nouvelle, et ne peut jamais être repris par quelqu'un d'autre.
 
 ## 4. Les notes
 
@@ -135,6 +135,8 @@ Le nombre de cases cochées s'affiche dans la liste (ex. `2/5`).
 - Si aucun appareil ni Telegram n'a accepté le rappel, la tâche l'indique en rouge (« Rappel non délivré »). En cas de panne passagère, FolioWork réessaie 3 fois (après 2, 10 puis 30 minutes).
 
 **Activer un nouvel appareil** : sur cet appareil, **Alertes → Activer les notifications**, puis **Envoyer un test**.
+
+**Notifications discrètes** (Alertes) : l'écran n'affiche que « Vous avez un rappel », sans titre ni note. À activer sur un ordinateur partagé ou un écran visible en réunion. Se **déconnecter** retire aussi les notifications de cet appareil. Les boutons d'une notification ne servent qu'une fois et expirent au bout de 12 h.
 
 **Résumé du matin** : **Alertes → Résumé quotidien**, choisissez l'heure. Vous recevez chaque matin les tâches du jour et celles en retard.
 

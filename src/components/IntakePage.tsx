@@ -53,7 +53,24 @@ export function IntakePage({ slug }: { slug: string }) {
 
       {info === undefined ? (
         <div className="py-24" aria-busy />
-      ) : info === null ? (
+      ) : info.status === "moved" ? (
+        <section className="py-16">
+          <h1 className="text-3xl">Ce formulaire a changé d'adresse.</h1>
+          {info.newSlug ? (
+            <>
+              <p className="mt-3 text-ink-2">Pour faire votre demande, utilisez désormais la nouvelle adresse.</p>
+              <a
+                href={`/demande/${info.newSlug}`}
+                className="mt-8 inline-flex h-12 items-center rounded-full bg-accent px-6 text-[15px] font-medium text-white"
+              >
+                Aller au formulaire
+              </a>
+            </>
+          ) : (
+            <p className="mt-3 text-ink-2">Il n'est plus actif. Demandez la bonne adresse à la personne qui vous l'a envoyé.</p>
+          )}
+        </section>
+      ) : info.status === "inactive" ? (
         <section className="py-16">
           <h1 className="text-3xl">Ce lien n'est pas actif.</h1>
           <p className="mt-3 text-ink-2">Demandez la bonne adresse à la personne qui vous l'a envoyé.</p>

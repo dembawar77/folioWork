@@ -37,6 +37,21 @@ function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
   return out;
 }
 
+/**
+ * Désabonne CET appareil (navigateur + serveur) avant une déconnexion : sur un ordinateur partagé,
+ * aucune notification ne doit plus y arriver.
+ */
+export async function forgetThisDevice(unsubscribeOnServer: (endpoint: string) => Promise<unknown>) {
+  try {
+    const sub = await currentSubscription();
+    if (!sub) return;
+    await unsubscribeOnServer(sub.endpoint).catch(() => undefined);
+    await sub.unsubscribe().catch(() => undefined);
+  } catch {
+    /* pas de service worker : rien à retirer */
+  }
+}
+
 export async function currentSubscription(): Promise<PushSubscription | null> {
   if (!("serviceWorker" in navigator)) return null;
   const reg = await navigator.serviceWorker.getRegistration();
