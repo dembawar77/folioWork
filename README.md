@@ -9,7 +9,7 @@ Tâches de travail et notes riches, synchronisées en temps réel entre ordinate
 
 | Rôle | Choix |
 |---|---|
-| Interface | React 19, Vite, TypeScript, Tailwind CSS v4 — charte Studio Eloïse (Satoshi + General Sans, Noir/Blanc, signal Bleu Eloïse #1D23E8, angles francs) |
+| Interface | React 19, Vite, TypeScript, Tailwind CSS v4 — charte Studio Eloïse (Satoshi + General Sans, Noir/Blanc, Bleu Eloïse #1D23E8 en accent ; ce qui se touche est rond, ce qui structure est droit) |
 | Notes | Tiptap (texte riche, cases à cocher) |
 | App installable | vite-plugin-pwa (service worker sur mesure : `src/sw.ts`) |
 | Backend | Convex : base de données temps réel, auth Google, fonctions programmées |

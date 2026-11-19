@@ -21,7 +21,7 @@ export function WaitingSection({ task }: { task: Task }) {
       <button
         type="button"
         onClick={() => setEditing(true)}
-        className="mt-4 inline-flex h-9 items-center gap-2 border border-line px-3 text-sm text-ink-2 hover:border-ink hover:text-ink"
+        className="mt-4 inline-flex h-9 items-center gap-2 rounded-full border border-line px-4 text-sm text-ink-2 hover:border-ink hover:text-ink"
       >
         <Hourglass className="size-4" aria-hidden /> Mettre en attente de…
       </button>
@@ -65,18 +65,18 @@ function WaitingStatus({ task, onEdit }: { task: Task; onEdit: () => void }) {
           target="_blank"
           rel="noreferrer"
           onClick={() => void nudged({ id: task._id as Id<"tasks"> })}
-          className="inline-flex h-10 items-center gap-2 bg-ink px-4 text-sm font-medium text-white transition-opacity duration-200 ease-brand hover:opacity-[.86]"
+          className="inline-flex h-10 items-center gap-2 rounded-full bg-accent px-5 text-sm font-medium text-white transition-opacity duration-200 ease-brand hover:opacity-[.86]"
         >
           <MessageCircle className="size-4" aria-hidden /> Relancer sur WhatsApp
         </a>
         <button
           type="button"
           onClick={() => void received({ id: task._id as Id<"tasks"> })}
-          className="inline-flex h-10 items-center gap-2 border border-line px-4 text-sm font-medium hover:border-ink"
+          className="inline-flex h-10 items-center gap-2 rounded-full border border-line px-5 text-sm font-medium hover:border-ink"
         >
           <Check className="size-4" aria-hidden /> Reçu
         </button>
-        <button type="button" onClick={onEdit} className="inline-flex h-10 items-center gap-2 px-3 text-sm text-ink-2 hover:bg-hover hover:text-ink">
+        <button type="button" onClick={onEdit} className="inline-flex h-10 items-center gap-2 rounded-full px-4 text-sm text-ink-2 hover:bg-hover hover:text-ink">
           <Pencil className="size-3.5" aria-hidden /> Modifier
         </button>
       </div>
@@ -168,10 +168,10 @@ function WaitingForm({ task, onDone }: { task: Task; onDone: () => void }) {
         </p>
       )}
       <div className="mt-3 flex gap-2">
-        <button type="submit" disabled={busy || !name.trim() || !phoneOk} className="h-10 bg-ink px-4 text-sm font-medium text-white disabled:opacity-50">
+        <button type="submit" disabled={busy || !name.trim() || !phoneOk} className="h-10 rounded-full bg-accent px-5 text-sm font-medium text-white disabled:opacity-50">
           {task.waitingFor ? "Enregistrer" : "Mettre en attente"}
         </button>
-        <button type="button" onClick={onDone} className="h-10 px-3 text-sm text-ink-2 hover:bg-hover hover:text-ink">
+        <button type="button" onClick={onDone} className="h-10 rounded-full px-4 text-sm text-ink-2 hover:bg-hover hover:text-ink">
           Annuler
         </button>
       </div>

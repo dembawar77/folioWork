@@ -91,13 +91,13 @@ function PushSection() {
       ) : (
         <div className="mt-3 flex flex-wrap gap-2">
           {!thisDeviceOn ? (
-            <button onClick={enable} disabled={busy || !vapid} className="h-10 bg-ink px-4 text-sm font-medium text-white disabled:opacity-60">
+            <button onClick={enable} disabled={busy || !vapid} className="h-10 rounded-full bg-accent px-5 text-sm font-medium text-white disabled:opacity-60">
               {busy ? "Activation…" : "Activer les notifications"}
             </button>
           ) : (
             <span className="inline-flex h-10 items-center gap-2 text-sm font-medium text-ink"><Check className="size-4" aria-hidden /> Activées sur cet appareil</span>
           )}
-          <button onClick={test} disabled={!devices?.length} className="inline-flex h-10 items-center gap-2 border border-line px-4 text-sm font-medium hover:bg-hover disabled:opacity-50">
+          <button onClick={test} disabled={!devices?.length} className="inline-flex h-10 items-center gap-2 rounded-full border border-line px-5 text-sm font-medium hover:bg-hover disabled:opacity-50">
             <Send className="size-3.5" aria-hidden /> Envoyer un test
           </button>
         </div>
@@ -120,7 +120,7 @@ function PushSection() {
               <button
                 onClick={() => unsubscribe({ endpoint: d.endpoint })}
                 aria-label={`Retirer ${d.deviceLabel}`}
-                className="grid size-9 place-items-center text-ink-3 hover:bg-hover hover:text-ink"
+                className="grid size-9 place-items-center rounded-full text-ink-3 hover:bg-hover hover:text-ink"
               >
                 <Trash2 className="size-3.5" aria-hidden />
               </button>
@@ -227,7 +227,7 @@ function TelegramSection() {
             href={`https://t.me/${bot}?start=${code}`}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex h-10 items-center bg-ink px-4 font-medium text-white"
+            className="inline-flex h-10 items-center rounded-full bg-accent px-5 font-medium text-white"
           >
             Ouvrir Telegram et relier
           </a>
@@ -236,7 +236,7 @@ function TelegramSection() {
           </p>
         </div>
       ) : (
-        <button onClick={async () => setCode(await createCode())} className="mt-3 h-10 border border-line px-4 text-sm font-medium hover:bg-hover">
+        <button onClick={async () => setCode(await createCode())} className="mt-3 h-10 rounded-full border border-line px-5 text-sm font-medium hover:bg-hover">
           Relier Telegram
         </button>
       )}

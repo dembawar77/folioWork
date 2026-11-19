@@ -4,8 +4,11 @@ import { useAuthActions } from "@convex-dev/auth/react";
 import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { Bell, CalendarDays, CheckCheck, Inbox, LogOut, Plus, Search, Sun, WifiOff, X } from "lucide-react";
+import { useMutation } from "convex/react";
+import type { Id } from "../../convex/_generated/dataModel";
 import { api } from "../../convex/_generated/api";
-import { counts, filterTasks, VIEW_LABEL, workstreamsOf, type View } from "../lib/tasks";
+import { counts, filterTasks, groupOf, VIEW_LABEL, workstreamsOf, type Task, type View } from "../lib/tasks";
+import { NewTaskSheet } from "./NewTaskSheet";
 import { QuickCapture, type QuickCaptureHandle } from "./QuickCapture";
 import { TaskRow } from "./TaskRow";
 import { AlertsPanel } from "./AlertsPanel";
@@ -55,6 +58,27 @@ export function Workspace() {
   const [search, setSearch] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const capture = useRef<QuickCaptureHandle>(null);
+  const [adding, setAdding] = useState(false);
+  const [prefill, setPrefill] = useState("");
+  const [toast, setToast] = useState<{ text: string; undo?: () => void } | null>(null);
+  const toggle = useMutation(api.tasks.toggle);
+
+  useEffect(() => {
+    if (!toast) return;
+    const id = setTimeout(() => setToast(null), 5000);
+    return () => clearTimeout(id);
+  }, [toast]);
+
+  const onToggled = useCallback(
+    (task: Task, completed: boolean) => {
+      if (!completed) return;
+      setToast({
+        text: task.recurrence ? `« ${task.title} » terminée · la suivante est planifiée` : `« ${task.title} » terminée`,
+        undo: () => void toggle({ id: task._id as Id<"tasks"> }),
+      });
+    },
+    [toggle],
+  );
   const searchRef = useRef<HTMLInputElement>(null);
 
   // Garde l'URL synchronisée (liens profonds depuis les notifications).
@@ -71,8 +95,8 @@ export function Workspace() {
     const p = new URLSearchParams(window.location.search);
     const shared = [p.get("title"), p.get("text"), p.get("url")].filter(Boolean).join(" ").trim();
     if (shared) {
-      setView("today");
-      setTimeout(() => capture.current?.prefill(shared.slice(0, 380)), 50);
+      setPrefill(shared.slice(0, 380));
+      setAdding(true);
     }
   }, []);
 
@@ -103,7 +127,7 @@ export function Workspace() {
       if (typing || e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key === "n") {
         e.preventDefault();
-        goCapture();
+        openSheet();
       } else if (e.key === "/") {
         e.preventDefault();
         setSearchOpen(true);
@@ -114,9 +138,9 @@ export function Workspace() {
     return () => window.removeEventListener("keydown", onKey);
   });
 
-  const goCapture = useCallback(() => {
-    setView((v) => (v === "alerts" || v === "done" ? "today" : v));
-    setTimeout(() => capture.current?.focus(), 0);
+  const openSheet = useCallback(() => {
+    setPrefill("");
+    setAdding(true);
   }, []);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -145,10 +169,11 @@ export function Workspace() {
               key={v}
               onClick={() => setView(v)}
               aria-current={view === v ? "page" : undefined}
-              className={`relative h-14 px-3 text-sm font-medium transition-colors duration-150 ${view === v ? "text-ink" : "text-ink-2 hover:text-ink"}`}
+              className={`relative h-14 px-3 text-sm font-medium transition-colors duration-150 ${view === v ? "text-accent" : "text-ink-2 hover:text-ink"}`}
             >
               {VIEW_LABEL[v]}
-              {view === v && <span className="absolute inset-x-3 bottom-0 h-[1.5px] bg-ink" />}
+              {v === "waiting" && c.toNudge > 0 && <span className="tabular ml-1 text-soon">{c.toNudge}</span>}
+              {view === v && <span className="absolute inset-x-3 bottom-0 h-0.5 bg-accent" />}
             </button>
           ))}
         </nav>
@@ -161,10 +186,10 @@ export function Workspace() {
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Rechercher  /"
               aria-label="Rechercher dans les tâches et les notes"
-              className="h-9 w-56 border border-line bg-alabaster pr-2 pl-8 text-sm outline-none focus:border-ink focus:bg-canvas"
+              className="h-9 w-56 rounded-full border border-line bg-alabaster pr-3 pl-8 text-sm outline-none focus:border-accent focus:bg-canvas"
             />
           </label>
-          <button onClick={goCapture} className="inline-flex h-9 items-center gap-1.5 bg-ink px-3 text-sm font-medium text-white hover:opacity-90">
+          <button onClick={openSheet} className="inline-flex h-9 items-center gap-1.5 rounded-full bg-accent px-4 text-sm font-medium text-white transition-opacity duration-200 ease-brand hover:opacity-90">
             <Plus className="size-4" aria-hidden /> Nouvelle tâche
           </button>
         </div>
@@ -180,7 +205,7 @@ export function Workspace() {
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Rechercher…"
               aria-label="Rechercher"
-              className="h-9 min-w-0 flex-1 border border-line bg-alabaster px-3 text-sm outline-none"
+              className="h-9 min-w-0 flex-1 rounded-full border border-line bg-alabaster px-4 text-sm outline-none focus:border-accent"
             />
             <button
               onClick={() => {
@@ -215,7 +240,7 @@ export function Workspace() {
             ))}
           </RailGroup>
           <RailGroup title="Catégories">
-            <RailItem active={workstream === null} onClick={() => setWorkstream(null)} label="Toutes" />
+            <RailItem active={false} current={workstream === null} onClick={() => setWorkstream(null)} label="Toutes" />
             {streams.map((w) => (
               <RailItem key={w} active={workstream === w} onClick={() => setWorkstream(workstream === w ? null : w)} label={w} count={streamCounts.get(w)} />
             ))}
@@ -223,9 +248,9 @@ export function Workspace() {
           <div className="mt-auto space-y-3 border-t border-line pt-4">
             <InstallButton />
             <div className="flex items-center gap-2">
-              {me?.image ? <img src={me.image} alt="" className="size-7" referrerPolicy="no-referrer" /> : <span className="size-7 bg-hover" />}
+              <AvatarImage image={me?.image} name={me?.name} />
               <span className="min-w-0 flex-1 truncate text-sm">{me?.name ?? ""}</span>
-              <button onClick={() => void signOut()} title="Se déconnecter" aria-label="Se déconnecter" className="grid size-8 place-items-center text-ink-3 hover:bg-hover hover:text-ink">
+              <button onClick={() => void signOut()} title="Se déconnecter" aria-label="Se déconnecter" className="grid size-8 place-items-center rounded-full text-ink-3 hover:bg-hover hover:text-ink">
                 <LogOut className="size-4" />
               </button>
             </div>
@@ -236,6 +261,7 @@ export function Workspace() {
         <main className="min-w-0 flex-1 px-4 pt-5 pb-28 md:px-10 md:pt-8 md:pb-16">
           <div className="mx-auto max-w-3xl">
             <ViewHeader view={view} counts={c} workstream={workstream} />
+            {view === "today" && c.today + c.doneToday > 0 && <Progress done={c.doneToday} total={c.today + c.doneToday} />}
 
             {/* Filtres (mobile) */}
             {view !== "alerts" && (
@@ -258,22 +284,33 @@ export function Workspace() {
               <AlertsPanel />
             ) : (
               <>
-                {view !== "done" && <QuickCapture ref={capture} defaultWorkstream={workstream} onCreated={(id) => view === "upcoming" && setExpanded(id)} />}
+                {view !== "done" && (
+                  <div className="hidden md:block">
+                    <QuickCapture ref={capture} defaultWorkstream={workstream} onCreated={(id) => view === "upcoming" && setExpanded(id)} />
+                  </div>
+                )}
                 {tasks === undefined ? (
                   <Skeleton />
                 ) : visible.length === 0 ? (
-                  <Empty view={view} searching={!!search} onCreate={goCapture} />
+                  <Empty view={view} searching={!!search} onCreate={openSheet} />
                 ) : (
                   <div>
-                    {visible.map((t, i) => (
+                    {visible.map((t, i) => {
+                      const now = Date.now();
+                      const g = groupOf(t, view, now);
+                      const prev = i > 0 ? groupOf(visible[i - 1], view, now) : null;
+                      const showHeader = g && g.key !== prev?.key && (view !== "today" || visible.some((x) => groupOf(x, view, now)?.key !== g.key));
+                      const groupCount = g ? visible.filter((x) => groupOf(x, view, now)?.key === g.key).length : 0;
+                      return (
                       <div key={t._id}>
-                        {view === "waiting" && t.waitingFor && t.waitingFor.name !== visible[i - 1]?.waitingFor?.name && (
-                          <p className={`eyebrow mb-1 flex gap-2 text-ink ${i === 0 ? "mt-2" : "mt-8"}`}>
-                            {t.waitingFor.name}
-                            <span className="text-ink-2">{visible.filter((x) => x.waitingFor?.name === t.waitingFor!.name).length}</span>
+                        {showHeader && (
+                          <p className={`eyebrow mb-1 flex gap-2 first-letter:uppercase ${g.tone === "alert" ? "text-alert" : "text-ink"} ${i === 0 ? "mt-3" : "mt-8"}`}>
+                            {g.label}
+                            <span className="text-ink-2">{groupCount}</span>
                           </p>
                         )}
                         <TaskRow
+                          onToggled={onToggled}
                           task={t}
                           expanded={expanded === t._id}
                           onToggleExpand={() => setExpanded(expanded === t._id ? null : t._id)}
@@ -281,7 +318,8 @@ export function Workspace() {
                           defaultOffset={prefs?.defaultReminderOffsetMinutes ?? 0}
                         />
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </>
@@ -295,14 +333,48 @@ export function Workspace() {
         className="fixed inset-x-0 bottom-0 z-20 grid grid-cols-4 border-t border-line bg-canvas pb-[env(safe-area-inset-bottom)] md:hidden"
         aria-label="Navigation"
       >
-        <TabButton active={view === "today"} onClick={() => setView("today")} icon={Sun} label="Aujourd'hui" badge={c.overdue || undefined} />
-        <TabButton active={view === "upcoming"} onClick={() => setView("upcoming")} icon={CalendarDays} label="À venir" />
-        <TabButton active={view === "alerts"} onClick={() => setView("alerts")} icon={Bell} label="Alertes" />
-        <TabButton active={false} onClick={goCapture} icon={Plus} label="Ajouter" accent />
+        <TabButton active={view === "today" && !adding} onClick={() => setView("today")} icon={Sun} label="Aujourd'hui" badge={c.overdue || undefined} />
+        <TabButton active={view === "upcoming" && !adding} onClick={() => setView("upcoming")} icon={CalendarDays} label="À venir" />
+        <TabButton active={adding} onClick={openSheet} icon={Plus} label="Ajouter" accent />
+        <TabButton active={view === "alerts" && !adding} onClick={() => setView("alerts")} icon={Bell} label="Alertes" />
       </nav>
 
+      <NewTaskSheet
+        open={adding}
+        onClose={() => setAdding(false)}
+        onCreated={(id, title) => {
+          setAdding(false);
+          setToast({ text: `« ${title} » ajoutée` });
+          setExpanded(null);
+          void id;
+        }}
+        workstreams={streams}
+        defaultWorkstream={workstream}
+        prefill={prefill}
+      />
+
+      {toast && (
+        <div
+          role="status"
+          className="animate-toast fixed inset-x-4 bottom-[calc(76px+env(safe-area-inset-bottom))] z-30 mx-auto flex max-w-md items-center gap-3 rounded-full bg-ink py-2.5 pr-2 pl-5 text-sm text-white md:bottom-8"
+        >
+          <span className="min-w-0 flex-1 truncate">{toast.text}</span>
+          {toast.undo && (
+            <button
+              onClick={() => {
+                toast.undo?.();
+                setToast(null);
+              }}
+              className="h-8 shrink-0 rounded-full px-3 font-medium text-white underline underline-offset-4 hover:bg-white/10"
+            >
+              Annuler
+            </button>
+          )}
+        </div>
+      )}
+
       {!online && (
-        <div role="status" className="fixed inset-x-0 bottom-[calc(64px+env(safe-area-inset-bottom))] z-30 mx-auto flex w-fit items-center gap-2 bg-ink px-3 py-2 text-xs text-white md:bottom-6">
+        <div role="status" className="fixed inset-x-0 top-[60px] z-30 mx-auto flex w-fit items-center gap-2 rounded-full bg-ink px-4 py-2 text-xs text-white md:top-16">
           <WifiOff className="size-3.5" aria-hidden /> Hors ligne : les modifications seront envoyées à la reconnexion.
         </div>
       )}
@@ -327,7 +399,7 @@ function ViewHeader({ view, counts: c, workstream }: { view: View; counts: Retur
   return (
     <div className="mb-4 flex items-end justify-between gap-4 border-b-[1.5px] border-ink pb-3">
       <div>
-        <p className="eyebrow mb-2 text-ink-2">{view === "today" ? today : workstream ?? "FolioWork"}</p>
+        {(view === "today" || workstream) && <p className="eyebrow mb-2 text-ink-2">{view === "today" ? today : workstream}</p>}
         <h1 className="text-2xl md:text-[34px] md:leading-[1.12]">{VIEW_LABEL[view]}</h1>
       </div>
       <p className="tabular pb-1 text-[13px] text-ink-2">
@@ -387,16 +459,29 @@ function RailGroup({ title, children }: { title: string; children: React.ReactNo
   );
 }
 
-function RailItem({ active, onClick, label, count }: { active: boolean; onClick: () => void; label: string; count?: number }) {
+function RailItem({
+  active,
+  current,
+  onClick,
+  label,
+  count,
+}: {
+  active: boolean;
+  /** Sélection neutre (pas de filtre) : marquée sans bleu. */
+  current?: boolean;
+  onClick: () => void;
+  label: string;
+  count?: number;
+}) {
   return (
     <li>
       <button
         onClick={onClick}
         aria-current={active ? "true" : undefined}
-        className={`flex h-8 w-full items-center px-2 text-left text-sm transition-colors duration-150 ${active ? "bg-hover font-medium text-ink" : "text-ink-2 hover:bg-hover hover:text-ink"}`}
+        className={`flex h-9 w-full items-center rounded-full px-3 text-left text-sm transition-colors duration-150 ${active ? "bg-accent/8 font-medium text-accent" : current ? "font-medium text-ink hover:bg-hover" : "text-ink-2 hover:bg-hover hover:text-ink"}`}
       >
         <span className="flex-1 truncate">{label}</span>
-        {count ? <span className="tabular text-xs text-ink-2">{count}</span> : null}
+        {count ? <span className={`tabular text-xs ${active ? "text-accent" : "text-ink-2"}`}>{count}</span> : null}
       </button>
     </li>
   );
@@ -407,7 +492,7 @@ function Chip({ active, onClick, children }: { active: boolean; onClick: () => v
     <button
       onClick={onClick}
       aria-pressed={active}
-      className={`h-8 shrink-0 border px-3 text-[13px] whitespace-nowrap ${active ? "border-ink bg-ink text-white" : "border-line text-ink-2"}`}
+      className={`h-9 shrink-0 rounded-full border px-4 text-[13px] whitespace-nowrap transition-colors duration-150 ${active ? "border-accent bg-accent text-white" : "border-line text-ink-2"}`}
     >
       {children}
     </button>
@@ -430,20 +515,38 @@ function TabButton({
   accent?: boolean;
 }) {
   return (
-    <button onClick={onClick} aria-current={active ? "page" : undefined} className={`relative flex h-16 flex-col items-center justify-center gap-0.5 text-[11px] font-medium ${accent || active ? "text-ink" : "text-ink-2"}`}>
+    <button
+      onClick={onClick}
+      aria-current={active ? "page" : undefined}
+      className={`relative flex h-[68px] flex-col items-center justify-center gap-0.5 text-[11px] font-medium transition-colors duration-150 ${active ? "text-accent" : "text-ink-2"}`}
+    >
       {accent ? (
-        <span className="grid size-7 place-items-center bg-ink text-white">
-          <Icon className="size-4" aria-hidden />
+        <span className={`grid size-9 place-items-center rounded-full text-white transition-colors duration-150 ${active ? "bg-accent" : "bg-ink"}`}>
+          <Icon className="size-5" aria-hidden />
         </span>
       ) : (
-        <Icon className="size-5" aria-hidden />
+        <span className="grid size-9 place-items-center">
+          <Icon className="size-5" aria-hidden />
+        </span>
       )}
       {label}
+      {active && !accent && <span aria-hidden className="absolute top-0 left-1/2 h-0.5 w-8 -translate-x-1/2 rounded-full bg-accent" />}
       {badge ? (
-        <span className="tabular absolute top-2 left-1/2 ml-3 text-[11px] font-medium text-alert" aria-label={`${badge} en retard`}>{badge}</span>
+        <span
+          className="tabular absolute top-2 left-1/2 ml-2.5 grid h-4 min-w-4 place-items-center rounded-full bg-alert px-1 text-[10px] font-medium text-white"
+          aria-label={`${badge} en retard`}
+        >
+          {badge}
+        </span>
       ) : null}
     </button>
   );
+}
+
+function AvatarImage({ image, name, size = "size-8" }: { image?: string; name?: string; size?: string }) {
+  if (image) return <img src={image} alt="" className={`${size} rounded-full object-cover`} referrerPolicy="no-referrer" />;
+  const initial = (name ?? "?").trim().charAt(0).toUpperCase() || "?";
+  return <span className={`${size} grid place-items-center rounded-full bg-accent text-sm font-medium text-white`}>{initial}</span>;
 }
 
 function Avatar({ image, name, onSignOut }: { image?: string; name?: string; onSignOut: () => Promise<void> }) {
@@ -451,16 +554,30 @@ function Avatar({ image, name, onSignOut }: { image?: string; name?: string; onS
   return (
     <div className="relative">
       <button onClick={() => setOpen((o) => !o)} aria-label="Compte" aria-expanded={open} className="grid size-11 place-items-center">
-        {image ? <img src={image} alt="" className="size-7" referrerPolicy="no-referrer" /> : <span className="size-7 bg-hover" />}
+        <AvatarImage image={image} name={name} />
       </button>
       {open && (
-        <div className="absolute top-12 right-0 w-52 border border-line bg-canvas p-1">
+        <div className="animate-fade absolute top-12 right-0 w-56 border border-line bg-canvas p-1">
           <p className="truncate px-3 py-2 text-sm text-ink-2">{name}</p>
-          <button onClick={() => void onSignOut()} className="flex h-10 w-full items-center gap-2 px-3 text-sm hover:bg-hover">
+          <button onClick={() => void onSignOut()} className="flex h-10 w-full items-center gap-2 rounded-full px-3 text-sm hover:bg-hover">
             <LogOut className="size-4" aria-hidden /> Se déconnecter
           </button>
         </div>
       )}
+    </div>
+  );
+}
+
+function Progress({ done, total }: { done: number; total: number }) {
+  const pct = Math.round((done / total) * 100);
+  return (
+    <div className="-mt-2 mb-4 flex items-center gap-3" aria-label={`${done} sur ${total} tâches faites aujourd'hui`}>
+      <div className="h-1 flex-1 overflow-hidden rounded-full bg-line-soft">
+        <div className="h-full rounded-full bg-accent transition-[width] duration-300 ease-brand" style={{ width: `${pct}%` }} />
+      </div>
+      <span className="tabular text-xs text-ink-2">
+        {done}/{total} faites
+      </span>
     </div>
   );
 }

@@ -1,8 +1,12 @@
 # FolioWork : mode d'emploi
 
-## 1. Ajouter une tâche en une ligne
+## 1. Ajouter une tâche
 
-Tapez dans le champ « Nouvelle tâche » puis **Entrée** :
+**Sur mobile** : bouton rond **+ Ajouter** en bas. **Sur ordinateur** : **Nouvelle tâche** en haut à droite, ou la touche `N`. L'écran « Nouvelle tâche » s'ouvre : écrivez la tâche en une phrase, puis touchez les raccourcis si besoin (**Quand** : ce soir, demain, lundi… ; **Priorité** ; **Catégorie** ; **Répéter** ; **En attente de**). Un raccourci touché l'emporte sur ce que la phrase indiquait.
+
+Sur ordinateur, le champ en haut de la liste reste disponible pour aller encore plus vite.
+
+Écrivez par exemple :
 
 ```
 Brief campagne vendredi 9h #Campagnes !urgent
@@ -33,6 +37,8 @@ Si une catégorie est sélectionnée à gauche (ou dans les filtres sur mobile),
 
 ⚠️ Une tâche **sans échéance** n'apparaît que dans **Toutes**.
 
+**Aujourd'hui** sépare **En retard** et **Aujourd'hui**, avec une barre de progression de la journée. **À venir** est classé par jour (Demain, lundi 23 novembre…).
+
 Les signaux :
 
 - **Rouge** : en retard (« En retard · Hier 16:00 »).
@@ -48,7 +54,7 @@ Cliquez sur une tâche pour la déplier. Vous pouvez :
 - écrire une **note** (voir ci-dessous) ;
 - **supprimer** la tâche (en bas à droite).
 
-Le **rond** à gauche termine la tâche. Dans **Terminées**, un nouveau clic la rouvre.
+Le **rond** à gauche termine la tâche. Un bandeau **Annuler** apparaît 5 secondes en cas d'erreur. Dans **Terminées**, un nouveau clic la rouvre.
 
 ## 3 bis. Tâches récurrentes
 

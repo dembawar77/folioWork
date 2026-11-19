@@ -1,5 +1,7 @@
 import type { FunctionReturnType } from "convex/server";
 import type { api } from "../../convex/_generated/api";
+import { format, isTomorrow } from "date-fns";
+import { fr } from "date-fns/locale";
 import { endOfToday } from "./dates";
 
 export type Task = FunctionReturnType<typeof api.tasks.list>[number];
@@ -90,11 +92,14 @@ export function counts(tasks: Task[]) {
     done = 0,
     overdue = 0,
     waiting = 0,
-    toNudge = 0;
+    toNudge = 0,
+    doneToday = 0;
+  const startOfToday = end - 86_400_000;
   const now = Date.now();
   for (const t of tasks) {
     if (t.completed) {
       done++;
+      if ((t.completedAt ?? 0) >= startOfToday) doneToday++;
       continue;
     }
     all++;
@@ -108,11 +113,27 @@ export function counts(tasks: Task[]) {
       if (t.dueAt < now) overdue++;
     }
   }
-  return { today, upcoming, all, done, overdue, waiting, toNudge };
+  return { today, upcoming, all, done, overdue, waiting, toNudge, doneToday };
 }
 
 export function workstreamsOf(tasks: Task[]): string[] {
   const set = new Set(DEFAULT_WORKSTREAMS);
   for (const t of tasks) if (t.workstream) set.add(t.workstream);
   return [...set];
+}
+
+export type Group = { key: string; label: string; tone?: "alert" };
+
+/** Section d'une tâche dans la liste : retard / aujourd'hui, jour à venir, personne attendue. */
+export function groupOf(t: Task, view: View, now: number): Group | null {
+  if (view === "today" && t.dueAt !== undefined) {
+    return t.dueAt < now ? { key: "late", label: "En retard", tone: "alert" } : { key: "today", label: "Aujourd'hui" };
+  }
+  if (view === "upcoming" && t.dueAt !== undefined) {
+    const d = new Date(t.dueAt);
+    const label = isTomorrow(d) ? "Demain" : format(d, "EEEE d MMMM", { locale: fr });
+    return { key: format(d, "yyyy-MM-dd"), label };
+  }
+  if (view === "waiting" && t.waitingFor) return { key: t.waitingFor.name, label: t.waitingFor.name };
+  return null;
 }

@@ -17,7 +17,7 @@
   --color-ink: #0a0a0a;
   --color-ink-2: rgba(10, 10, 10, 0.72);
   --color-ink-3: rgba(10, 10, 10, 0.52);
-  /* Bleu Eloïse : un seul signal par zone, jamais en fond. */
+  /* Bleu Eloïse : couleur d'accent (emplacement actif, actions principales, sélection). */
   --color-accent: #1d23e8;
   /* Rouge d'alerte fonctionnel : uniquement retards et erreurs (contraste 5,9:1 sur blanc). */
   --color-alert: #c8102e;
@@ -28,6 +28,22 @@
   --ease-brand: cubic-bezier(0.22, 0.61, 0.36, 1);
   --animate-reveal: reveal 200ms cubic-bezier(0.22, 0.61, 0.36, 1);
 
+  --animate-sheet: sheet 280ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  --animate-fade: fade 200ms cubic-bezier(0.22, 0.61, 0.36, 1);
+  --animate-toast: toast 240ms cubic-bezier(0.22, 0.61, 0.36, 1);
+
+  @keyframes sheet {
+    from { transform: translateY(32px); opacity: 0; }
+    to { transform: none; opacity: 1; }
+  }
+  @keyframes fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes toast {
+    from { transform: translateY(8px); opacity: 0; }
+    to { transform: none; opacity: 1; }
+  }
   @keyframes reveal {
     from { opacity: 0; transform: translateY(-4px); }
     to { opacity: 1; transform: none; }

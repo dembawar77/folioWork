@@ -109,7 +109,7 @@ function Toolbar({ editor, status }: { editor: Editor; status: "idle" | "saving"
       aria-pressed={active}
       onMouseDown={(e) => e.preventDefault()}
       onClick={run}
-      className={`grid size-8 place-items-center transition-colors duration-150 ${active ? "bg-ink text-white" : "text-ink-2 hover:bg-hover"}`}
+      className={`grid size-8 place-items-center rounded-full transition-colors duration-150 ${active ? "bg-accent text-white" : "text-ink-2 hover:bg-hover"}`}
     >
       <Icon className="size-4" aria-hidden />
     </button>

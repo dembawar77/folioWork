@@ -32,7 +32,7 @@ export function InstallButton({ variant = "compact" }: { variant?: "compact" | "
   if (isIos()) {
     return (
       <div>
-        <button onClick={() => setShowIosHelp((s) => !s)} className="inline-flex h-10 items-center gap-2 border border-line px-3 text-sm font-medium hover:bg-hover">
+        <button onClick={() => setShowIosHelp((s) => !s)} className="inline-flex h-10 items-center gap-2 rounded-full border border-line px-4 text-sm font-medium hover:bg-hover">
           <Download className="size-4" aria-hidden /> Installer
         </button>
         {showIosHelp && (
@@ -53,7 +53,7 @@ export function InstallButton({ variant = "compact" }: { variant?: "compact" | "
         deferred = null;
         force((n) => n + 1);
       }}
-      className="inline-flex h-10 items-center gap-2 border border-line px-3 text-sm font-medium hover:bg-hover"
+      className="inline-flex h-10 items-center gap-2 rounded-full border border-line px-4 text-sm font-medium hover:bg-hover"
     >
       <Download className="size-4" aria-hidden /> Installer l'app
     </button>

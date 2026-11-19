@@ -46,7 +46,7 @@ export function SignIn() {
           <button
             onClick={start}
             disabled={pending}
-            className="mt-10 inline-flex h-12 items-center gap-3 bg-ink px-5 font-medium text-white transition-opacity duration-200 ease-brand hover:opacity-[.86] disabled:opacity-60"
+            className="mt-10 inline-flex h-12 items-center gap-3 rounded-full bg-accent px-6 font-medium text-white transition-opacity duration-200 ease-brand hover:opacity-[.86] disabled:opacity-60"
           >
             <GoogleMark />
             {pending ? "Redirection…" : "Continuer avec Google"}

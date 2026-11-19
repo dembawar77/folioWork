@@ -73,7 +73,7 @@ export const QuickCapture = forwardRef<QuickCaptureHandle, { defaultWorkstream?:
     return (
       <form onSubmit={submit} className="border-b border-line">
         <label className="flex items-center gap-3 py-3">
-          <span aria-hidden className="grid size-5 shrink-0 place-items-center border border-dashed border-ink-3 text-ink-3">
+          <span aria-hidden className="grid size-5 shrink-0 place-items-center rounded-full border border-dashed border-ink-3 text-ink-3">
             +
           </span>
           <input
@@ -87,7 +87,7 @@ export const QuickCapture = forwardRef<QuickCaptureHandle, { defaultWorkstream?:
             className="min-w-0 flex-1 bg-transparent py-1 text-[15px] outline-none placeholder:text-ink-3"
           />
           {value && (
-            <button type="submit" disabled={busy} className="flex h-9 items-center gap-1.5 bg-ink px-3 text-sm font-medium text-white disabled:opacity-60">
+            <button type="submit" disabled={busy} className="flex h-9 items-center gap-1.5 rounded-full bg-accent px-4 text-sm font-medium text-white disabled:opacity-60">
               Ajouter <CornerDownLeft className="size-3.5" aria-hidden />
             </button>
           )}

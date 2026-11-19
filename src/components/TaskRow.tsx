@@ -33,7 +33,9 @@ export function TaskRow({
   onToggleExpand,
   workstreams,
   defaultOffset,
+  onToggled,
 }: {
+  onToggled?: (task: Task, completed: boolean) => void;
   task: Task;
   expanded: boolean;
   onToggleExpand: () => void;
@@ -104,12 +106,15 @@ export function TaskRow({
           role="checkbox"
           aria-checked={task.completed}
           aria-label={task.completed ? `Rouvrir « ${task.title} »` : `Terminer « ${task.title} »`}
-          onClick={() => toggle({ id: task._id })}
+          onClick={() => {
+            void toggle({ id: task._id });
+            onToggled?.(task, !task.completed);
+          }}
           className="-ml-2.5 grid size-11 shrink-0 place-items-center"
         >
           <span
-            className={`grid size-5 place-items-center border transition-colors duration-150 ${
-              task.completed ? "border-ink bg-ink text-white" : task.priority === "urgent" ? "border-[1.5px] border-ink" : "border-ink-3 hover:border-ink"
+            className={`grid size-5 place-items-center rounded-full border transition-colors duration-150 ${
+              task.completed ? "border-accent bg-accent text-white" : task.priority === "urgent" ? "border-[1.5px] border-ink" : "border-ink-3 hover:border-accent"
             }`}
           >
             {task.completed && (
