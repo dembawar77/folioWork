@@ -52,7 +52,7 @@ export function SignIn() {
             {pending ? "Redirection…" : "Continuer avec Google"}
           </button>
           {(error || flowError) && (
-            <p role="alert" className="mt-3 text-sm font-medium text-ink">
+            <p role="alert" className="mt-3 text-sm font-medium text-alert">
               {error ?? "La connexion a échoué. Réessayez."}
             </p>
           )}

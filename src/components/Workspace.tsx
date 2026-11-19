@@ -299,7 +299,7 @@ function ViewHeader({ view, counts: c, workstream }: { view: View; counts: Retur
   const today = format(new Date(), "EEEE d MMMM", { locale: fr });
   const sub =
     view === "today"
-      ? [`${c.today} tâche${c.today > 1 ? "s" : ""}`, c.overdue ? `${c.overdue} en retard` : null].filter(Boolean).join(" · ")
+      ? `${c.today} tâche${c.today > 1 ? "s" : ""}`
       : view === "upcoming"
         ? `${c.upcoming} planifiée${c.upcoming > 1 ? "s" : ""}`
         : view === "all"
@@ -313,7 +313,10 @@ function ViewHeader({ view, counts: c, workstream }: { view: View; counts: Retur
         <p className="eyebrow mb-2 text-ink-2">{view === "today" ? today : workstream ?? "FolioWork"}</p>
         <h1 className="text-2xl md:text-[34px] md:leading-[1.12]">{VIEW_LABEL[view]}</h1>
       </div>
-      <p className={`tabular pb-1 text-[13px] ${c.overdue && view === "today" ? "font-medium text-accent" : "text-ink-2"}`}>{sub}</p>
+      <p className="tabular pb-1 text-[13px] text-ink-2">
+        {sub}
+        {view === "today" && c.overdue > 0 && <span className="font-medium text-alert"> · {c.overdue} en retard</span>}
+      </p>
     </div>
   );
 }
@@ -417,7 +420,7 @@ function TabButton({
       )}
       {label}
       {badge ? (
-        <span className="tabular absolute top-2 left-1/2 ml-3 text-[11px] font-medium text-accent" aria-label={`${badge} en retard`}>{badge}</span>
+        <span className="tabular absolute top-2 left-1/2 ml-3 text-[11px] font-medium text-alert" aria-label={`${badge} en retard`}>{badge}</span>
       ) : null}
     </button>
   );

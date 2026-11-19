@@ -103,7 +103,7 @@ function PushSection() {
         </div>
       )}
       {msg && (
-        <p role="status" className={`mt-2 text-sm ${msg.kind === "ok" ? "text-ink-2" : "font-medium text-ink"}`}>
+        <p role="status" className={`mt-2 text-sm ${msg.kind === "ok" ? "text-ink-2" : "font-medium text-alert"}`}>
           {msg.text}
         </p>
       )}

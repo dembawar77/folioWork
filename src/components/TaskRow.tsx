@@ -61,7 +61,7 @@ export function TaskRow({
   }
   if (task.dueAt !== undefined) {
     meta.push(
-      <span key="d" className={`tabular ${overdue ? "font-medium text-ink" : soon ? "text-ink" : ""}`}>
+      <span key="d" className={`tabular ${overdue ? "font-medium text-alert" : soon ? "text-ink" : ""}`}>
         {overdue ? "En retard · " : ""}
         {formatDueShort(task.dueAt)}
       </span>,
@@ -231,7 +231,7 @@ function TaskDetail({ task, workstreams, defaultOffset }: { task: Task; workstre
         </button>
       </div>
       {error && (
-        <p role="alert" className="mt-2 text-xs text-ink">
+        <p role="alert" className="mt-2 text-xs font-medium text-alert">
           {error}
         </p>
       )}

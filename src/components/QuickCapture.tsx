@@ -96,7 +96,7 @@ export const QuickCapture = forwardRef<QuickCaptureHandle, { defaultWorkstream?:
           </p>
         )}
         {error && (
-          <p role="alert" className="-mt-1 pb-3 pl-8 text-xs text-ink">
+          <p role="alert" className="-mt-1 pb-3 pl-8 text-xs font-medium text-alert">
             {error}
           </p>
         )}
