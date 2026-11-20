@@ -11,9 +11,9 @@ import { localDayBounds } from "./lib/time";
 import { dayAt, firstDue, localTime, nextDue, withAnchor, type Recurrence } from "./lib/recurrence";
 import { normalizePhone } from "./lib/whatsapp";
 
-const MAX_TITLE = 300;
-const MAX_NOTE = 100_000;
-const MAX_WORKSTREAM = 40;
+export const MAX_TITLE = 300;
+export const MAX_NOTE = 100_000;
+export const MAX_WORKSTREAM = 40;
 
 function cleanTitle(title: string): string {
   const t = title.trim();
@@ -103,7 +103,7 @@ export async function insertTask(
 
 const DEFAULT_FOLLOW_UP_DAYS = 2;
 const FOLLOW_UP_TIME = "09:00";
-const nameKey = (name: string) => name.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+export const nameKey = (name: string) => name.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
 async function upsertContact(ctx: MutationCtx, userId: Id<"users">, name: string, phone: string | undefined) {
   const existing = await ctx.db

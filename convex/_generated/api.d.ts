@@ -23,6 +23,7 @@ import type * as lib_whatsapp from "../lib/whatsapp.js";
 import type * as notify from "../notify.js";
 import type * as preferences from "../preferences.js";
 import type * as push from "../push.js";
+import type * as restore from "../restore.js";
 import type * as tasks from "../tasks.js";
 import type * as telegram from "../telegram.js";
 import type * as users from "../users.js";
@@ -49,6 +50,7 @@ declare const fullApi: ApiFromModules<{
   notify: typeof notify;
   preferences: typeof preferences;
   push: typeof push;
+  restore: typeof restore;
   tasks: typeof tasks;
   telegram: typeof telegram;
   users: typeof users;

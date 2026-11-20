@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useConvex, useMutation, useQuery } from "convex/react";
-import { Check, Send, Smartphone, Trash2, CircleAlert, Download, FileJson, FileSpreadsheet } from "lucide-react";
+import { Check, Send, Smartphone, Trash2, CircleAlert, Download, FileJson, FileSpreadsheet, Upload } from "lucide-react";
 import { api } from "../../convex/_generated/api";
 import { errorMessage } from "../lib/errors";
 import { currentSubscription, isIos, pushSupport, subscribePush } from "../lib/push";
@@ -9,6 +9,7 @@ import { InstallButton } from "./InstallButton";
 import { IntakeSection } from "./IntakeSection";
 import { backupName, collectBackup, saveFile, toCsv, toJson, type Backup } from "../lib/backup";
 import { useConnected } from "../lib/offline";
+import { planRestore, readBackup, runRestore, type RestorePlan } from "../lib/restore";
 import { getThemePref, setThemePref, type ThemePref } from "../lib/theme";
 
 const OFFSETS = [
@@ -372,12 +373,153 @@ function BackupSection() {
         </p>
       )}
       <AutoBackup connected={connected} />
+      <RestoreBackup connected={connected} />
     </section>
   );
 }
 
 const fmtWhen = (ms: number) =>
   new Date(ms).toLocaleString("fr-FR", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" });
+
+const plural = (n: number, word: string) => `${n} ${word}${n > 1 ? "s" : ""}`;
+
+type RestoreState =
+  | { kind: "idle" }
+  | { kind: "reading" }
+  | { kind: "confirm"; plan: RestorePlan }
+  | { kind: "running"; plan: RestorePlan; done: number }
+  | { kind: "done"; tasks: number; contacts: number }
+  | { kind: "error"; message: string };
+
+function RestoreBackup({ connected }: { connected: boolean }) {
+  const convex = useConvex();
+  const me = useQuery(api.users.me);
+  const input = useRef<HTMLInputElement>(null);
+  const [state, setState] = useState<RestoreState>({ kind: "idle" });
+
+  async function pick(file: File | undefined) {
+    if (!file) return;
+    setState({ kind: "reading" });
+    try {
+      const plan = await planRestore(convex, await readBackup(file));
+      setState({ kind: "confirm", plan });
+    } catch (err) {
+      setState({ kind: "error", message: errorMessage(err, "Lecture impossible, réessayez") });
+    } finally {
+      if (input.current) input.current.value = "";
+    }
+  }
+
+  async function restore(plan: RestorePlan) {
+    setState({ kind: "running", plan, done: 0 });
+    try {
+      const res = await runRestore(convex, plan, (done) => setState({ kind: "running", plan, done }));
+      setState({ kind: "done", ...res });
+    } catch (err) {
+      setState({ kind: "error", message: errorMessage(err, "Restauration interrompue : relancez-la, rien ne sera ajouté deux fois") });
+    }
+  }
+
+  const busy = state.kind === "reading" || state.kind === "running";
+
+  return (
+    <div className="mt-6 max-w-xl border-t border-line-soft pt-5 text-sm">
+      <p>
+        Restaurer une sauvegarde
+        <span className="block text-xs text-ink-2">
+          Choisissez un fichier .json (export ou envoi Telegram). Seul ce qui manque dans votre compte est ajouté : rien n'est supprimé ni modifié.
+        </span>
+      </p>
+      <input ref={input} type="file" accept=".json,application/json" className="hidden" onChange={(e) => void pick(e.target.files?.[0])} />
+
+      {state.kind === "confirm" ? (
+        <RestoreConfirm plan={state.plan} myEmail={me?.email ?? null} onCancel={() => setState({ kind: "idle" })} onConfirm={() => void restore(state.plan)} />
+      ) : (
+        <button
+          onClick={() => input.current?.click()}
+          disabled={busy || !connected}
+          className="mt-3 inline-flex h-10 items-center gap-2 rounded-full border border-line px-5 font-medium hover:border-ink disabled:opacity-40"
+        >
+          <Upload className="size-4" aria-hidden />
+          {state.kind === "reading"
+            ? "Lecture du fichier…"
+            : state.kind === "running"
+              ? `Restauration… ${state.done}/${state.plan.missingTasks.length}`
+              : "Choisir une sauvegarde"}
+        </button>
+      )}
+
+      <div aria-live="polite">
+        {state.kind === "done" && (
+          <p className="mt-2 font-medium text-ink">
+            <Check className="mr-1 inline size-4 text-accent" aria-hidden />
+            {state.tasks || state.contacts
+              ? `Restauré : ${[state.tasks ? plural(state.tasks, "tâche") : null, state.contacts ? plural(state.contacts, "contact") : null].filter(Boolean).join(" et ")}.`
+              : "Tout était déjà dans votre compte."}
+          </p>
+        )}
+        {state.kind === "error" && (
+          <p role="alert" className="mt-2 font-medium text-alert">
+            {state.message}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function RestoreConfirm({ plan, myEmail, onCancel, onConfirm }: { plan: RestorePlan; myEmail: string | null; onCancel: () => void; onConfirm: () => void }) {
+  const nT = plan.missingTasks.length;
+  const nC = plan.missingContacts.length;
+  const open = plan.missingTasks.filter((t) => !t.completed).length;
+  const date = plan.exportedAt ? new Date(plan.exportedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : null;
+  const otherAccount = plan.email && myEmail && plan.email.toLowerCase() !== myEmail.toLowerCase();
+  const nothing = nT === 0 && nC === 0;
+
+  return (
+    <div className="mt-3 border border-line p-4">
+      <p className="font-medium">
+        Sauvegarde{date ? ` du ${date}` : ""} · {plural(plan.tasks.length, "tâche")}, {plural(plan.contacts.length, "contact")}
+      </p>
+      {otherAccount && <p className="mt-1 text-xs font-medium text-soon">Elle vient d'un autre compte ({plan.email}).</p>}
+      <p className="mt-2 text-ink-2">
+        {nothing
+          ? "Tout est déjà dans votre compte. Rien à restaurer."
+          : `Manque${nT + nC > 1 ? "nt" : ""} dans votre compte : ${[
+              nT ? `${plural(nT, "tâche")} (dont ${open} ouverte${open > 1 ? "s" : ""})` : null,
+              nC ? plural(nC, "contact") : null,
+            ]
+              .filter(Boolean)
+              .join(" et ")}. ${
+              nC ? (nT + nC > 1 ? "Ils seront ajoutés" : "Il sera ajouté") : nT > 1 ? "Elles seront ajoutées" : "Elle sera ajoutée"
+            }, le reste n'est pas touché.`}
+      </p>
+      {nT > 0 && (
+        <ul className="mt-2 space-y-0.5 text-xs text-ink-2">
+          {plan.missingTasks.slice(0, 5).map((t) => (
+            <li key={t.id} className="truncate">
+              {t.completed ? "✓ " : "• "}
+              {t.title}
+            </li>
+          ))}
+          {nT > 5 && <li>et {nT - 5} autre{nT - 5 > 1 ? "s" : ""}…</li>}
+        </ul>
+      )}
+      {plan.invalid > 0 && <p className="mt-2 text-xs text-ink-3">{plural(plan.invalid, "élément")} illisible{plan.invalid > 1 ? "s" : ""} ignoré{plan.invalid > 1 ? "s" : ""}.</p>}
+      <p className="mt-2 text-xs text-ink-3">Les réglages et la boîte de dépôt du compte ne changent pas.</p>
+      <div className="mt-3 flex flex-wrap gap-2">
+        {!nothing && (
+          <button onClick={onConfirm} className="inline-flex h-10 items-center rounded-full bg-accent px-5 font-medium text-on-accent hover:opacity-90">
+            Restaurer {nT ? plural(nT, "tâche") : plural(nC, "contact")}
+          </button>
+        )}
+        <button onClick={onCancel} className="inline-flex h-10 items-center rounded-full border border-line px-5 font-medium hover:border-ink">
+          {nothing ? "Fermer" : "Annuler"}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function AutoBackup({ connected }: { connected: boolean }) {
   const status = useQuery(api.backup.autoStatus);

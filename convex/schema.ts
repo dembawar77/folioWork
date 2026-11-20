@@ -25,6 +25,14 @@ export const vWaitingFor = v.object({
   lastNotifiedAt: v.optional(v.number()),
 });
 
+export const vRequest = v.object({
+  from: v.string(),
+  service: v.optional(v.string()),
+  phone: v.optional(v.string()),
+  receivedAt: v.number(),
+  seen: v.boolean(),
+});
+
 export default defineSchema({
   users: defineTable({
     name: v.optional(v.string()),
@@ -69,15 +77,7 @@ export default defineSchema({
     /** En attente d'un retour de quelqu'un. */
     waitingFor: v.optional(vWaitingFor),
     /** Arrivée par la boîte de dépôt. */
-    request: v.optional(
-      v.object({
-        from: v.string(),
-        service: v.optional(v.string()),
-        phone: v.optional(v.string()),
-        receivedAt: v.number(),
-        seen: v.boolean(),
-      }),
-    ),
+    request: v.optional(vRequest),
     followUpJobId: v.optional(v.id("_scheduled_functions")),
     /** Identifiant choisi par l'appareil à la création (hors connexion) : évite les doublons au renvoi. */
     clientId: v.optional(v.string()),

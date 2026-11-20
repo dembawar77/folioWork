@@ -153,6 +153,18 @@ Le nombre de cases cochées s'affiche dans la liste (ex. `2/5`).
 
 Sur téléphone, le menu de partage s'ouvre : choisissez **Enregistrer dans Fichiers**, Drive ou votre e-mail. Sur ordinateur, le fichier part dans *Téléchargements*. La date du dernier export s'affiche sous le bouton.
 
+### Restaurer une sauvegarde
+
+**Alertes → Mes données → Choisir une sauvegarde**, puis choisissez un fichier `.json`. Il peut venir d'un export ou d'un envoi Telegram : sur téléphone, ouvrez le fichier dans Telegram, enregistrez-le dans *Fichiers*, puis choisissez-le.
+
+L'app compare le fichier à votre compte et affiche ce qui **manque**, par exemple « 3 tâches (dont 2 ouvertes) », avec leurs titres. Vous confirmez, et seul ce qui manque est ajouté :
+
+- rien n'est supprimé ni modifié : une tâche encore présente, même changée depuis, reste telle quelle ;
+- restaurer deux fois le même fichier n'ajoute rien la deuxième fois ;
+- les notes, la répétition, la personne attendue et l'état terminé reviennent ; les rappels à venir sont reprogrammés, et une relance déjà en retard est décalée au lendemain 9h, pour éviter une rafale de notifications ;
+- les contacts absents sont ajoutés ; les réglages et la boîte de dépôt ne changent pas ;
+- un fichier d'un autre compte est accepté (changement d'adresse Google, par exemple), avec un avertissement.
+
 ### Sauvegarde automatique (Telegram)
 
 Juste en dessous : **Sauvegarde automatique sur Telegram**. Activez-la une fois. Chaque **dimanche à 20h** (heure de votre fuseau), le bot vous envoie le fichier `foliowork-AAAA-MM-JJ.json`, le même que la sauvegarde complète. Vous gardez ainsi une copie par semaine dans la conversation, hors de FolioWork, sans y penser.
@@ -213,5 +225,4 @@ Se **déconnecter** efface toutes les données de l'appareil (une confirmation e
 ## 10. Limites actuelles (v0.1)
 
 - **Un seul utilisateur** : pas encore de partage avec l'équipe.
-- **Pas encore de restauration** : les sauvegardes (.json) contiennent tout, mais l'app ne sait pas encore les réimporter.
 - Les dates ne sont reconnues **qu'en français**.
